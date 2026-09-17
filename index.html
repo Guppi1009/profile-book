@@ -79,7 +79,12 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
 .photo img.show{opacity:1}
 .photo .empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:10px;padding:24px;color:var(--muted);font-size:clamp(13px,1.9vh,16px)}
 .photo .empty .big{font-size:clamp(40px,8vh,72px);line-height:1}
-.photo .empty a,.photo .empty button{font:inherit;font-size:inherit;color:var(--link);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+.photo .empty .pick{display:flex;flex-direction:column;gap:8px;align-items:stretch;width:min(100%,260px);margin:4px auto 0}
+.photo .empty .pbtn{font:inherit;font-weight:700;font-size:clamp(13px,1.9vh,15px);padding:10px 14px;border-radius:999px;border:2px solid var(--line);background:var(--paper);color:var(--chip-ink);cursor:pointer;text-decoration:none;text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.06)}
+.photo .empty .pbtn.g{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+.photo .empty .pbtn:active{transform:translateY(2px);box-shadow:none}
+.photo .empty .hint{font-size:clamp(11px,1.5vh,12px);color:var(--muted)}
+.photo .cap .capbtn{font:inherit;font-size:inherit;color:var(--link);background:none;border:0;padding:0;cursor:pointer}
 .photo.drag .pola{outline:4px dashed var(--accent);outline-offset:-8px}
 .photo .cap{position:absolute;left:0;right:0;bottom:0;padding:4px 12px;font-size:clamp(10px,1.4vh,12px);color:var(--muted);background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:space-between;gap:8px}
 .photo .cap:empty{display:none}
@@ -169,6 +174,7 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
     </section>
     <div id="msg"></div>
   </main>
+  <input type="file" id="pick" accept="image/*" hidden>
 </div>
 <div id="shareBox" role="dialog" aria-modal="true" aria-label="みんなに共有">
   <div class="panel">
@@ -478,6 +484,19 @@ async function wikiImage(base,title){
   files.sort((a,b)=>sc(b)-sc(a));
   return files.length&&sc(files[0])>0?(files[0].i.thumburl||files[0].i.url):null;
 }
+const COMMONS='https://commons.wikimedia.org/w/api.php';
+const BAD_FILE=/logo|icon|symbol|flag|map|emblem|seal|coat|banner|train|bus|ship|boat|car|station|cosplay|memorial|shrine|jinja|temple|grave|tomb|monument|statue|stamp|coin|poster|cover|book|sign|road|street|building|museum|exhibit|display|shop|store|wrap|advert|itasha|festival|parade|crowd|screenshot|diagram|chart|graph|text|page|document|manuscript|list|table|\.ogv|\.webm|\.pdf|\.tif|\.gif/i;
+async function commonsImage(names){ // Wikimedia Commons の写真検索（ファイル名に名前を含むものだけ）
+  for(const n of names.filter(Boolean)){
+    const r=await getJSON(COMMONS,{action:'query',generator:'search',gsrsearch:n,gsrnamespace:6,gsrlimit:12,prop:'imageinfo',iiprop:'url|mime|size',iiurlwidth:900}).catch(()=>null);
+    const pages=(r&&r.query&&r.query.pages||[]).sort((a,b)=>(a.index||0)-(b.index||0));
+    const toks=norm(n).split(/[・\s]/).filter(t=>t.length>=2);
+    const ok=pages.map(f=>({t:f.title,i:(f.imageinfo||[])[0]||{}}))
+      .filter(f=>/image\/(jpeg|png|webp)/.test(f.i.mime||'')&&(f.i.width||0)>=300&&!BAD_FILE.test(f.t)&&toks.some(t=>norm(f.t).includes(t)));
+    if(ok.length) return ok[0].i.thumburl||ok[0].i.url;
+  }
+  return null;
+}
 async function googleImage(q){
   if(!GOOGLE_API_KEY||!GOOGLE_CSE_ID) return null;
   try{
@@ -500,13 +519,30 @@ function setImage(src,from,link){
   if(!src){els.img.removeAttribute('src');els.empty.style.display='';els.cap.innerHTML='';return;}
   els.img.src=src;els.img.onload=()=>{els.img.classList.add('show');els.empty.style.display='none';};
   els.img.onerror=()=>{noImage(link);};
-  els.cap.innerHTML='<span>画像：'+esc(from)+'</span>'+(link?'<a href="'+esc(link)+'" target="_blank" rel="noopener">記事を見る ↗</a>':'');
+  els.cap.innerHTML='<span>画像：'+esc(from)+'</span><span><button type="button" class="capbtn" id="changeImg">🔄 かえる</button>'+(link?' <a href="'+esc(link)+'" target="_blank" rel="noopener">記事を見る ↗</a>':'')+'</span>';
+  $('changeImg').onclick=openChooser;
+}
+function chooserHTML(name,msg){
+  const g='https://www.google.com/search?tbm=isch&safe=active&q='+encodeURIComponent(name||els.q.value);
+  return '<div class="big">🎨</div><div>'+esc(msg)+'</div>'
+    +'<div class="pick"><a class="pbtn g" href="'+g+'" target="_blank" rel="noopener">🔍 Google画像で探す</a>'
+    +'<button type="button" class="pbtn" id="pasteBtn">📋 コピーした画像を貼る</button>'
+    +'<button type="button" class="pbtn" id="fileBtn">📷 写真からえらぶ</button></div>'
+    +'<div class="hint">探した画像を長押し →「コピー」→「貼る」の順でOK</div>';
+}
+function wireChooser(){
+  const pb=$('pasteBtn'),fb=$('fileBtn');
+  if(pb) pb.onclick=pasteFromClipboard;
+  if(fb) fb.onclick=()=>$('pick').click();
 }
 function noImage(link,name){
   els.img.removeAttribute('src');els.img.classList.remove('show');els.empty.style.display='';
-  const g='https://www.google.com/search?tbm=isch&safe=active&q='+encodeURIComponent(name||els.q.value);
-  els.empty.innerHTML='<div class="big">🎨</div><div>Wikipediaに画像がありませんでした</div><div><a href="'+g+'" target="_blank" rel="noopener">Google画像で探す ↗</a><br>見つけた画像をここにドラッグ＆ドロップ（または貼り付け）するとここに入るよ</div>';
+  els.empty.innerHTML=chooserHTML(name,'Wikipediaに画像がありませんでした');wireChooser();
   els.cap.innerHTML=link?'<span></span><a href="'+esc(link)+'" target="_blank" rel="noopener">記事を見る ↗</a>':'';
+}
+function openChooser(){ // 画像を差し替えたいとき
+  els.img.classList.remove('show');els.empty.style.display='';
+  els.empty.innerHTML=chooserHTML(currentName(),'べつの画像にする');wireChooser();
 }
 function renderChips(cands){
   els.chips.innerHTML='';
@@ -591,6 +627,7 @@ async function run(query,opt={}){
         if(!src) await fromEn(); if(!src) fromJa(); if(!src) fromP18();
       }
       if(!src&&page&&page.thumbnail){src=page.thumbnail.source;from='Wikipedia（'+cleanTitle(page.title)+'）';}
+      if(!src){const enLabel=ent&&ent.labels&&ent.labels.en&&ent.labels.en.value;src=await commonsImage([dispName,enTitle,enLabel]);if(src)from='Wikimedia Commons（関連写真）';}
       if(my!==seq) return;
       if(src) setImage(src,from,link); else noImage(link,dispName);
     })();
@@ -642,11 +679,30 @@ function mkey(n){return 'pb_img:'+n;}
 function getManual(n){try{return localStorage.getItem(mkey(n));}catch(e){return null;}}
 function setManual(n,v){try{if(v&&v.length<1500000)localStorage.setItem(mkey(n),v);}catch(e){}}
 function currentName(){return els.v.name.textContent.trim();}
+function shrink(src){ // 大きな写真は縮小して保存（タブレットのカメラロール対策）
+  return new Promise(res=>{const im=new Image();im.onload=()=>{const M=1000,r=Math.min(1,M/Math.max(im.width,im.height));
+    if(r>=1&&src.length<900000) return res(src);
+    const c=document.createElement('canvas');c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);try{res(c.toDataURL('image/jpeg',.85));}catch(e){res(src);}};im.onerror=()=>res(null);im.src=src;});
+}
 async function acceptImage(src){
   if(!src) return; const n=currentName(); if(!n) return;
-  if(await loadImg(src)){setManual(n,src);setImage(src,'自分で追加した画像','');show('画像を入れました');}
+  if(/^data:/.test(src)) src=await shrink(src);
+  if(src&&await loadImg(src)){setManual(n,src);setImage(src,'自分で追加した画像','');show('画像を入れました');}
   else show('この画像は読み込めませんでした。別の画像を試してね');
 }
+async function pasteFromClipboard(){
+  try{
+    if(navigator.clipboard&&navigator.clipboard.read){
+      const items=await navigator.clipboard.read();
+      for(const it of items){const t=it.types.find(x=>/^image\//.test(x));if(t){const b=await it.getType(t);return acceptImage(await fileToData(b));}}
+      for(const it of items){if(it.types.includes('text/plain')){const txt=await (await it.getType('text/plain')).text();if(/^https?:\/\//.test(txt.trim()))return acceptImage(txt.trim());}}
+    }
+    if(navigator.clipboard&&navigator.clipboard.readText){const txt=await navigator.clipboard.readText();if(/^https?:\/\//.test((txt||'').trim()))return acceptImage(txt.trim());}
+    show('コピーした画像が見つかりません。画像を長押し→「コピー」してからもう一度');
+  }catch(e){show('貼り付けが許可されませんでした。「写真からえらぶ」を試してね');}
+}
+$('pick').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(f&&/^image\//.test(f.type)){acceptImage(await fileToData(f));}e.target.value='';});
 function fileToData(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res(null);r.readAsDataURL(file);});}
 async function handleTransfer(dt){
   if(!dt) return;
