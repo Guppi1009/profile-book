@@ -72,10 +72,11 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
   background-color:var(--frame);background-image:radial-gradient(var(--frame-dot) 1.5px,transparent 1.7px);background-size:16px 16px;
   border-right:3px dashed var(--line);
 }
-.photo .pola{width:100%;height:100%;min-height:0;display:grid;place-items:center;background:#fff;border-radius:18px;padding:clamp(8px,1.6vh,14px);box-shadow:0 8px 22px rgba(120,60,90,.16);transform:rotate(-1.3deg);position:relative}
+.photo{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.photo .pola{width:100%;height:100%;min-height:0;min-width:0;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);place-items:center;background:#fff;border-radius:18px;padding:clamp(8px,1.6vh,14px);box-shadow:0 8px 22px rgba(120,60,90,.16);transform:rotate(-1.3deg);position:relative}
 .photo .pola::before{content:"";position:absolute;top:-10px;left:50%;width:84px;height:22px;transform:translateX(-50%) rotate(2deg);
   background:repeating-linear-gradient(135deg,var(--tape2) 0 8px,rgba(255,255,255,.35) 8px 12px);box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.photo img{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .25s;border-radius:12px}
+.photo img{width:100%;height:100%;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .25s;border-radius:12px}
 .photo img.show{opacity:1}
 .photo .empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:10px;padding:24px;color:var(--muted);font-size:clamp(13px,1.9vh,16px)}
 .photo .empty .big{font-size:clamp(40px,8vh,72px);line-height:1}
@@ -124,7 +125,7 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
 #shareBox button{font:inherit;font-weight:700;font-size:14px;padding:9px 16px;border-radius:999px;border:0;cursor:pointer}
 #shareBox .copy{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
 #shareBox .close{background:var(--chip);color:var(--chip-ink)}
-@media (max-width:700px){
+@media (max-width:700px), (orientation:portrait) and (max-width:1000px){
   #app{padding:10px 12px 12px}
   h1{font-size:19px}
   main.card{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,38%) minmax(0,62%)}
@@ -486,16 +487,14 @@ async function wikiImage(base,title){
 }
 const COMMONS='https://commons.wikimedia.org/w/api.php';
 const BAD_FILE=/logo|icon|symbol|flag|map|emblem|seal|coat|banner|train|bus|ship|boat|car|station|cosplay|memorial|shrine|jinja|temple|grave|tomb|monument|statue|stamp|coin|poster|cover|book|sign|road|street|building|museum|exhibit|display|shop|store|wrap|advert|itasha|festival|parade|crowd|screenshot|diagram|chart|graph|text|page|document|manuscript|list|table|\.ogv|\.webm|\.pdf|\.tif|\.gif/i;
-async function commonsImage(names){ // Wikimedia Commons の写真検索（ファイル名に名前を含むものだけ）
-  for(const n of names.filter(Boolean)){
-    const r=await getJSON(COMMONS,{action:'query',generator:'search',gsrsearch:n,gsrnamespace:6,gsrlimit:12,prop:'imageinfo',iiprop:'url|mime|size',iiurlwidth:900}).catch(()=>null);
-    const pages=(r&&r.query&&r.query.pages||[]).sort((a,b)=>(a.index||0)-(b.index||0));
-    const toks=norm(n).split(/[・\s]/).filter(t=>t.length>=2);
-    const ok=pages.map(f=>({t:f.title,i:(f.imageinfo||[])[0]||{}}))
-      .filter(f=>/image\/(jpeg|png|webp)/.test(f.i.mime||'')&&(f.i.width||0)>=300&&!BAD_FILE.test(f.t)&&toks.some(t=>norm(f.t).includes(t)));
-    if(ok.length) return ok[0].i.thumburl||ok[0].i.url;
-  }
-  return null;
+async function commonsImage(cat){ // Wikidata の「コモンズのカテゴリ」(P373) にある写真だけを使う（検索は雑音が多いので使わない）
+  if(!cat) return null;
+  const r=await getJSON(COMMONS,{action:'query',generator:'categorymembers',gcmtitle:'Category:'+cat,gcmtype:'file',gcmlimit:30,prop:'imageinfo',iiprop:'url|mime|size',iiurlwidth:900}).catch(()=>null);
+  const files=(r&&r.query&&r.query.pages||[]).map(f=>({t:f.title,i:(f.imageinfo||[])[0]||{}}))
+    .filter(f=>/image\/(jpeg|png|webp)/.test(f.i.mime||'')&&(f.i.width||0)>=500&&!BAD_FILE.test(f.t));
+  const toks=norm(cat).split(/[・\s]/).filter(t=>t.length>=2);
+  files.sort((a,b)=>(toks.filter(t=>norm(b.t).includes(t)).length-toks.filter(t=>norm(a.t).includes(t)).length)||((b.i.width||0)-(a.i.width||0)));
+  return files.length?(files[0].i.thumburl||files[0].i.url):null;
 }
 async function googleImage(q){
   if(!GOOGLE_API_KEY||!GOOGLE_CSE_ID) return null;
@@ -611,25 +610,23 @@ async function run(query,opt={}){
     const intro=(sectionOf?body:text).split(/\n==/)[0];
     setField('name',dispName,[sectionOf?'':extractReading(intro,dispName),desc].filter(Boolean).join('　'));
 
-    // 画像（設定時Google → 自分の記事の画像 → 英語版 → Wikidata → 手動）
+    // 画像：候補を順に試し、実際に読み込めた最初の1枚を使う
     (async()=>{
       const manual=getManual(dispName); if(manual){setImage(manual,'自分で追加した画像',link);return;}
-      let src=null,from='';
       const human=ent&&claimVals(ent,'P31').some(v=>v.id==='Q5');
       const p18=ent&&claimVals(ent,'P18')[0];
-      const fromP18=()=>{if(p18){src='https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(p18)+'?width=900';from='Wikimedia Commons';}};
-      const fromJa=()=>{if(page&&page.thumbnail&&!sectionOf){src=page.thumbnail.source;from='Wikipedia';}};
-      const fromEn=async()=>{if(enTitle){src=await wikiImage(EN,enTitle);if(src)from='Wikipedia（英語版）';}};
-      const g=await googleImage(dispName); if(g){src=g.src;from=g.from;}
-      if(human){ // 実在の人物：Wikidataの肖像 → 日本語版 → 英語版
-        if(!src) fromP18(); if(!src) fromJa(); if(!src) await fromEn();
-      }else{     // キャラクター：英語版（公式絵が多い）→ 日本語版 → Wikidata
-        if(!src) await fromEn(); if(!src) fromJa(); if(!src) fromP18();
+      const tP18=()=>p18?['https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(p18)+'?width=900','Wikimedia Commons']:null;
+      const tJa=()=>(page&&page.thumbnail&&!sectionOf)?[page.thumbnail.source,'Wikipedia']:null;
+      const tEn=async()=>{const s=enTitle?await wikiImage(EN,enTitle):null;return s?[s,'Wikipedia（英語版）']:null;};
+      const tJaAny=()=>(page&&page.thumbnail)?[page.thumbnail.source,'Wikipedia（'+cleanTitle(page.title)+'）']:null;
+      const tCat=async()=>{const s=ent?await commonsImage(claimVals(ent,'P373')[0]):null;return s?[s,'Wikimedia Commons']:null;};
+      const tGoogle=async()=>{const g=await googleImage(dispName);return g?[g.src,g.from]:null;};
+      const tiers=human?[tGoogle,tP18,tJa,tEn,tJaAny,tCat]:[tGoogle,tEn,tJa,tP18,tJaAny,tCat];
+      for(const t of tiers){
+        const r=await t(); if(my!==seq) return;
+        if(r&&r[0]&&await loadImg(r[0])){ if(my!==seq) return; setImage(r[0],r[1],link); return; }
       }
-      if(!src&&page&&page.thumbnail){src=page.thumbnail.source;from='Wikipedia（'+cleanTitle(page.title)+'）';}
-      if(!src){const enLabel=ent&&ent.labels&&ent.labels.en&&ent.labels.en.value;src=await commonsImage([dispName,enTitle,enLabel]);if(src)from='Wikimedia Commons（関連写真）';}
-      if(my!==seq) return;
-      if(src) setImage(src,from,link); else noImage(link,dispName);
+      if(my===seq) noImage(link,dispName);
     })();
 
     // 出身・年齢（Wikidata優先 → 本文）
