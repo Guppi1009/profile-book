@@ -7,75 +7,91 @@
 <meta name="description" content="人物やキャラクターの名前を検索すると、画像と「名前・出身・年齢・好きなもの・嫌いなもの」を1画面に表示します。Wikipediaの情報だけを使う無料のミニアプリ。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f6f1e7; --paper:#fffdf8; --ink:#2b2a28; --muted:#7a746a; --line:#e6ddcc;
-  --accent:#e8846b; --accent-ink:#fff; --chip:#efe7d6; --chip-ink:#4a4437;
-  --label:#3f7d8a; --label-ink:#fff; --frame:#f2e9d8; --shadow:0 10px 30px rgba(80,60,20,.10);
-  --link:#2f6f9e;
+  --bg:#fff5f7; --dot:#ffd3de; --paper:#ffffff; --ink:#4a3b40; --muted:#9a8a90; --line:#ffd6e0;
+  --accent:#ff8fab; --accent2:#ff6f91; --accent-ink:#fff; --chip:#fff0f4; --chip-ink:#6b4a56;
+  --frame:#fff8ea; --frame-dot:#ffe4b8; --tape:rgba(255,205,120,.75); --tape2:rgba(180,225,245,.8);
+  --shadow:0 12px 34px rgba(255,120,160,.18); --link:#3f8ec9; --label-ink:#5a3a46;
+  --c-pink:#ffc8d6; --c-mint:#c9f0dd; --c-yellow:#fff0a8; --c-lavender:#e2d6ff; --c-sky:#cfe9ff;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#1c1b19; --paper:#26241f; --ink:#f1ece2; --muted:#a39c8f; --line:#3a362e;
-    --accent:#e8846b; --chip:#37332a; --chip-ink:#e6dfd2; --label:#4d95a4; --frame:#302c24;
-    --shadow:0 10px 30px rgba(0,0,0,.35); --link:#7fb6e0;
+    --bg:#2a2130; --dot:#3a2d42; --paper:#342a3b; --ink:#f7ecf1; --muted:#b8a7b3; --line:#4b3a4f;
+    --accent:#ff8fab; --accent2:#ff6f91; --chip:#43354a; --chip-ink:#f2dbe6; --frame:#3d3140; --frame-dot:#4a3c4e;
+    --tape:rgba(255,205,120,.45); --tape2:rgba(180,225,245,.45); --shadow:0 12px 34px rgba(0,0,0,.35); --link:#8fc4ee; --label-ink:#3b2530;
+    --c-pink:#f4a9be; --c-mint:#9fdcc0; --c-yellow:#f3dd86; --c-lavender:#c7b6f2; --c-sky:#a9d3f5;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#1c1b19; --paper:#26241f; --ink:#f1ece2; --muted:#a39c8f; --line:#3a362e;
-  --accent:#e8846b; --chip:#37332a; --chip-ink:#e6dfd2; --label:#4d95a4; --frame:#302c24;
-  --shadow:0 10px 30px rgba(0,0,0,.35); --link:#7fb6e0;
+  --bg:#2a2130; --dot:#3a2d42; --paper:#342a3b; --ink:#f7ecf1; --muted:#b8a7b3; --line:#4b3a4f;
+  --chip:#43354a; --chip-ink:#f2dbe6; --frame:#3d3140; --frame-dot:#4a3c4e;
+  --tape:rgba(255,205,120,.45); --tape2:rgba(180,225,245,.45); --shadow:0 12px 34px rgba(0,0,0,.35); --link:#8fc4ee; --label-ink:#3b2530;
+  --c-pink:#f4a9be; --c-mint:#9fdcc0; --c-yellow:#f3dd86; --c-lavender:#c7b6f2; --c-sky:#a9d3f5;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overflow:hidden}
 body{
-  background:var(--bg);color:var(--ink);
+  background-color:var(--bg);
+  background-image:radial-gradient(var(--dot) 1.7px,transparent 1.9px);background-size:22px 22px;
+  color:var(--ink);
   font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif;
   font-weight:500;line-height:1.4;
 }
 #app{height:100dvh;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding:12px 16px 14px;max-width:1280px;margin:0 auto}
 header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-h1{font-size:clamp(18px,2.6vh,24px);margin:0;letter-spacing:.06em;white-space:nowrap;display:flex;align-items:center;gap:8px}
-h1 .mark{display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--accent);color:#fff;font-size:.8em}
+h1{font-family:"Hachi Maru Pop","Zen Maru Gothic",sans-serif;font-weight:400;font-size:clamp(19px,2.9vh,26px);margin:0;letter-spacing:.04em;white-space:nowrap;display:flex;align-items:center;gap:8px;color:var(--accent2)}
+h1 .mark{font-size:1.15em;filter:drop-shadow(0 2px 0 rgba(0,0,0,.08))}
 form{display:flex;gap:8px;flex:1;min-width:240px}
-input[type=search]{
-  flex:1;min-width:0;font:inherit;font-size:clamp(15px,2.2vh,18px);padding:10px 14px;border-radius:999px;border:2px solid var(--line);
-  background:var(--paper);color:var(--ink);outline:none;
-}
-input[type=search]:focus{border-color:var(--accent)}
-button.go{font:inherit;font-weight:700;font-size:clamp(14px,2vh,16px);padding:10px 20px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);cursor:pointer;white-space:nowrap}
-button.go:active{transform:translateY(1px)}
+.search{flex:1;display:flex;align-items:center;gap:8px;min-width:0;padding:0 8px 0 14px;border-radius:999px;border:3px solid var(--line);background:var(--paper);box-shadow:0 4px 0 rgba(255,143,171,.18)}
+.search:focus-within{border-color:var(--accent)}
+.search .ico{font-size:1.1em;opacity:.8}
+input[type=search]{flex:1;min-width:0;font:inherit;font-size:clamp(15px,2.2vh,18px);padding:9px 4px;border:0;background:transparent;color:var(--ink);outline:none}
+input[type=search]::placeholder{color:#c9b3bc}
+button.go{font:inherit;font-weight:700;font-size:clamp(14px,2vh,16px);padding:10px 20px;border:0;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);cursor:pointer;white-space:nowrap;box-shadow:0 4px 0 #d95a7e;transition:transform .08s}
+button.go:active{transform:translateY(3px);box-shadow:0 1px 0 #d95a7e}
+button.share{font:inherit;font-weight:700;font-size:clamp(12px,1.8vh,14px);padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:var(--paper);color:var(--chip-ink);cursor:pointer;white-space:nowrap}
+button.share:hover{border-color:var(--accent)}
 #chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;min-height:0;scrollbar-width:none;align-items:center}
 #chips::-webkit-scrollbar{display:none}
 #chips:empty{display:none}
-.chip{flex:0 0 auto;font:inherit;font-size:clamp(12px,1.7vh,14px);padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--chip);color:var(--chip-ink);cursor:pointer;max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chip.on{background:var(--label);color:var(--label-ink);border-color:var(--label)}
+.chip{flex:0 0 auto;font:inherit;font-size:clamp(12px,1.7vh,14px);padding:4px 12px;border-radius:999px;border:2px solid var(--line);background:var(--chip);color:var(--chip-ink);cursor:pointer;max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip:hover{border-color:var(--accent);background:var(--paper)}
 .chip .d{opacity:.7;font-size:.86em}
 main.card{
   min-height:0;display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:0;
-  background:var(--paper);border-radius:22px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;position:relative;
+  background:var(--paper);border-radius:28px;box-shadow:var(--shadow);border:3px solid var(--line);overflow:hidden;position:relative;
 }
+main.card::before,main.card::after{content:"";position:absolute;z-index:3;width:110px;height:26px;top:-6px;pointer-events:none;
+  background:repeating-linear-gradient(135deg,var(--tape) 0 8px,rgba(255,255,255,.35) 8px 12px);opacity:.95;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+main.card::before{left:26px;transform:rotate(-6deg)}
+main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-gradient(135deg,var(--tape2) 0 8px,rgba(255,255,255,.35) 8px 12px)}
 .photo{
-  position:relative;min-height:0;background:var(--frame);display:grid;place-items:center;overflow:hidden;
-  border-right:1px solid var(--line);
+  position:relative;min-height:0;display:grid;place-items:center;overflow:hidden;padding:clamp(14px,3vh,28px);
+  background-color:var(--frame);background-image:radial-gradient(var(--frame-dot) 1.5px,transparent 1.7px);background-size:16px 16px;
+  border-right:3px dashed var(--line);
 }
-.photo img{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .25s}
+.photo .pola{width:100%;height:100%;min-height:0;display:grid;place-items:center;background:#fff;border-radius:18px;padding:clamp(8px,1.6vh,14px);box-shadow:0 8px 22px rgba(120,60,90,.16);transform:rotate(-1.3deg);position:relative}
+.photo .pola::before{content:"";position:absolute;top:-10px;left:50%;width:84px;height:22px;transform:translateX(-50%) rotate(2deg);
+  background:repeating-linear-gradient(135deg,var(--tape2) 0 8px,rgba(255,255,255,.35) 8px 12px);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.photo img{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .25s;border-radius:12px}
 .photo img.show{opacity:1}
-.photo .empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:10px;padding:20px;color:var(--muted);font-size:clamp(13px,1.9vh,16px)}
+.photo .empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:10px;padding:24px;color:var(--muted);font-size:clamp(13px,1.9vh,16px)}
 .photo .empty .big{font-size:clamp(40px,8vh,72px);line-height:1}
 .photo .empty a,.photo .empty button{font:inherit;font-size:inherit;color:var(--link);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
-.photo.drag{outline:4px dashed var(--accent);outline-offset:-8px}
-.photo .cap{position:absolute;left:0;right:0;bottom:0;padding:4px 10px;font-size:clamp(10px,1.4vh,12px);color:var(--muted);background:color-mix(in srgb,var(--paper) 78%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:space-between;gap:8px}
+.photo.drag .pola{outline:4px dashed var(--accent);outline-offset:-8px}
+.photo .cap{position:absolute;left:0;right:0;bottom:0;padding:4px 12px;font-size:clamp(10px,1.4vh,12px);color:var(--muted);background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:space-between;gap:8px}
 .photo .cap:empty{display:none}
 .photo .cap a{color:var(--link);text-decoration:none}
 .info{min-height:0;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));padding:clamp(8px,1.6vh,18px) clamp(14px,2.4vw,28px)}
-.row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:clamp(10px,1.6vw,18px);border-bottom:1px dashed var(--line);min-height:0;padding:2px 0}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:clamp(10px,1.6vw,18px);border-bottom:2px dotted var(--line);min-height:0;padding:2px 0}
 .row:last-child{border-bottom:0}
 .row .k{
-  width:clamp(74px,8.5vw,110px);text-align:center;font-weight:700;font-size:clamp(12px,1.8vh,15px);letter-spacing:.08em;
-  background:var(--label);color:var(--label-ink);border-radius:999px;padding:4px 0;
+  width:clamp(96px,10.5vw,132px);text-align:center;font-family:"Hachi Maru Pop","Zen Maru Gothic",sans-serif;font-size:clamp(12px,1.8vh,15px);letter-spacing:.04em;
+  color:var(--label-ink);border-radius:999px;padding:5px 0;box-shadow:0 3px 0 rgba(0,0,0,.06);white-space:nowrap;
 }
+.row.name .k{background:var(--c-pink)} .row.origin .k{background:var(--c-mint)} .row.age .k{background:var(--c-yellow)} .row.like .k{background:var(--c-lavender)} .row.dislike .k{background:var(--c-sky)}
 .row .v{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
 .row .v .main{
   font-weight:700;font-size:clamp(17px,3.2vh,30px);line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
@@ -86,20 +102,37 @@ main.card{
 .row .v .main.wait{color:var(--muted);font-weight:500;font-size:clamp(14px,2.2vh,18px)}
 .row .v .main.wait::after{content:"…";animation:dots 1s steps(3,end) infinite}
 @keyframes dots{0%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
-#status{position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--label));transform:scaleX(0);transform-origin:left;transition:transform .3s;opacity:0}
+#status{position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--accent),#ffd166,#9be7c4,#b8c4ff);transform:scaleX(0);transform-origin:left;transition:transform .3s;opacity:0;z-index:4}
 #status.on{opacity:1;animation:bar 1.6s ease-in-out infinite}
 @keyframes bar{0%{transform:scaleX(0)}70%{transform:scaleX(.85)}100%{transform:scaleX(.85)}}
-#msg{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:clamp(12px,1.8vh,14px);opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
-#msg.on{opacity:.92}
+#msg{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:var(--accent2);color:#fff;padding:8px 16px;border-radius:999px;font-size:clamp(12px,1.8vh,14px);opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center;z-index:5}
+#msg.on{opacity:.95}
+/* 共有パネル */
+#shareBox{position:fixed;inset:0;display:none;place-items:center;background:rgba(80,40,60,.45);z-index:20;padding:16px}
+#shareBox.on{display:grid}
+#shareBox .panel{background:var(--paper);border:3px solid var(--line);border-radius:26px;padding:22px 24px;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow);position:relative}
+#shareBox h2{font-family:"Hachi Maru Pop","Zen Maru Gothic",sans-serif;font-weight:400;font-size:20px;margin:0 0 6px;color:var(--accent2)}
+#shareBox p{margin:6px 0;font-size:14px;color:var(--muted)}
+#shareBox .qr{width:min(56vh,240px);height:auto;background:#fff;border-radius:12px;padding:6px;margin:8px auto;display:block}
+#shareBox .url{font-size:14px;word-break:break-all;background:var(--chip);border-radius:12px;padding:8px 10px;margin:8px 0;color:var(--ink)}
+#shareBox .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#shareBox button{font:inherit;font-weight:700;font-size:14px;padding:9px 16px;border-radius:999px;border:0;cursor:pointer}
+#shareBox .copy{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+#shareBox .close{background:var(--chip);color:var(--chip-ink)}
 @media (max-width:700px){
   #app{padding:10px 12px 12px}
-  main.card{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,40%) minmax(0,60%)}
-  .photo{border-right:0;border-bottom:1px solid var(--line)}
+  h1{font-size:19px}
+  main.card{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,38%) minmax(0,62%)}
+  button.share{font-size:0;padding:8px 10px} button.share::before{content:"🔗";font-size:14px}
+  main.card::before,main.card::after{width:80px;height:20px}
+  .photo{border-right:0;border-bottom:3px dashed var(--line);padding:14px 16px 10px}
+  .photo .pola{padding:6px;border-radius:14px}
   .info{padding:6px 12px}
-  .row .k{width:70px;font-size:12px}
-  .row .v .main{font-size:clamp(15px,2.6vh,22px)}
+  .row .k{width:88px;font-size:12px}
+  .row .v .main{font-size:clamp(14px,2.4vh,20px);-webkit-line-clamp:1}
   .row.name .v .main{font-size:clamp(17px,3vh,26px)}
   .chip{max-width:60vw}
+  button.share{padding:7px 10px}
 }
 @media (max-height:520px){
   .row .v .sub{display:none}
@@ -109,32 +142,42 @@ main.card{
 <body>
 <div id="app">
   <header>
-    <h1><span class="mark">帳</span>プロフィール帳</h1>
+    <h1><span class="mark">📖</span>プロフィール帳<span class="mark">✨</span></h1>
     <form id="f" autocomplete="off">
-      <input id="q" type="search" placeholder="人物やキャラクターの名前（例：大谷翔平・ドラえもん）" enterkeyhint="search" aria-label="名前を検索">
-      <button class="go" type="submit">しらべる</button>
+      <label class="search"><span class="ico">🔍</span><input id="q" type="search" placeholder="名前を入れてね（例：大谷翔平・ドラえもん）" enterkeyhint="search" aria-label="名前を検索"></label>
+      <button class="go" type="submit">しらべる♪</button>
     </form>
+    <button class="share" type="button" id="shareBtn" title="URLとQRコードを表示">🔗 みんなに共有</button>
   </header>
   <div id="chips" aria-label="ほかの候補"></div>
   <main class="card">
     <div id="status"></div>
     <section class="photo" id="photo" aria-label="画像">
-      <img id="img" alt="">
+      <div class="pola"><img id="img" alt=""></div>
       <div class="empty" id="empty">
         <div class="big">🔍</div>
-        <div>名前を入れて「しらべる」を押してね</div>
+        <div>名前を入れて「しらべる♪」を押してね</div>
       </div>
       <div class="cap" id="cap"></div>
     </section>
     <section class="info" id="info">
-      <div class="row name"><div class="k">名前</div><div class="v"><div class="main" id="v-name"></div><div class="sub" id="s-name"></div></div></div>
-      <div class="row"><div class="k">出身</div><div class="v"><div class="main" id="v-origin"></div><div class="sub" id="s-origin"></div></div></div>
-      <div class="row"><div class="k">年齢</div><div class="v"><div class="main" id="v-age"></div><div class="sub" id="s-age"></div></div></div>
-      <div class="row"><div class="k">好きなもの</div><div class="v"><div class="main" id="v-like"></div><div class="sub" id="s-like"></div></div></div>
-      <div class="row"><div class="k">嫌いなもの</div><div class="v"><div class="main" id="v-dislike"></div><div class="sub" id="s-dislike"></div></div></div>
+      <div class="row name"><div class="k">🌟 名前</div><div class="v"><div class="main" id="v-name"></div><div class="sub" id="s-name"></div></div></div>
+      <div class="row origin"><div class="k">🏠 出身</div><div class="v"><div class="main" id="v-origin"></div><div class="sub" id="s-origin"></div></div></div>
+      <div class="row age"><div class="k">🎂 年齢</div><div class="v"><div class="main" id="v-age"></div><div class="sub" id="s-age"></div></div></div>
+      <div class="row like"><div class="k">💗 好きなもの</div><div class="v"><div class="main" id="v-like"></div><div class="sub" id="s-like"></div></div></div>
+      <div class="row dislike"><div class="k">💦 嫌いなもの</div><div class="v"><div class="main" id="v-dislike"></div><div class="sub" id="s-dislike"></div></div></div>
     </section>
     <div id="msg"></div>
   </main>
+</div>
+<div id="shareBox" role="dialog" aria-modal="true" aria-label="みんなに共有">
+  <div class="panel">
+    <h2>🔗 みんなに共有</h2>
+    <p>スマホでQRコードを読むと、そのまま開けます</p>
+    <svg class="qr" width="198" height="198" class="segno"><path transform="scale(6)" class="qrline" stroke="#c2456b" d="M2 2.5h7m2 0h3m2 0h2m3 0h1m2 0h7m-29 1h1m5 0h1m1 0h1m1 0h1m4 0h5m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m4 0h1m2 0h1m5 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m2 0h4m1 0h1m3 0h1m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m3 0h5m1 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m4 0h1m2 0h3m2 0h1m2 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-20 1h2m2 0h5m1 0h2m-21 1h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h1m2 0h3m5 0h1m2 0h1m-28 1h1m3 0h2m1 0h1m2 0h2m4 0h1m3 0h3m2 0h1m2 0h1m-29 1h3m1 0h1m1 0h1m3 0h1m2 0h1m2 0h2m6 0h1m1 0h3m-29 1h1m4 0h1m3 0h1m3 0h5m1 0h1m3 0h1m3 0h1m-28 1h1m3 0h1m1 0h1m1 0h2m1 0h3m1 0h3m1 0h2m1 0h2m1 0h1m1 0h2m-29 1h1m1 0h1m2 0h1m6 0h1m3 0h1m3 0h1m1 0h1m2 0h1m2 0h1m-28 1h1m1 0h1m2 0h3m4 0h2m3 0h1m3 0h1m1 0h2m1 0h2m-29 1h1m4 0h1m1 0h1m1 0h2m2 0h3m1 0h2m1 0h1m2 0h1m1 0h1m1 0h1m-27 1h1m1 0h1m2 0h2m1 0h1m1 0h7m2 0h1m1 0h2m1 0h1m1 0h2m-26 1h1m3 0h2m3 0h1m3 0h1m3 0h1m1 0h1m2 0h2m1 0h1m-29 1h1m1 0h2m2 0h4m2 0h2m2 0h2m2 0h1m1 0h3m2 0h2m-28 1h3m3 0h1m3 0h4m1 0h3m1 0h2m3 0h1m1 0h1m-28 1h1m3 0h3m1 0h1m1 0h2m2 0h1m1 0h9m-17 1h1m1 0h1m1 0h2m2 0h1m2 0h2m3 0h1m1 0h3m-29 1h7m4 0h1m2 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h2m-29 1h1m5 0h1m5 0h2m2 0h5m3 0h2m-26 1h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h4m2 0h5m-25 1h1m1 0h3m1 0h1m4 0h2m3 0h3m2 0h1m2 0h1m1 0h3m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h2m1 0h1m1 0h1m2 0h1m1 0h3m2 0h1m-29 1h1m5 0h1m3 0h2m2 0h1m2 0h1m2 0h2m2 0h1m2 0h1m-28 1h7m1 0h3m6 0h1m2 0h1m1 0h3m2 0h2"/></svg>
+    <div class="url" id="shareUrl">https://guppi1009.github.io/profile-book/</div>
+    <div class="btns"><button class="copy" id="copyUrl" type="button">URLをコピー</button><button class="close" id="closeShare" type="button">とじる</button></div>
+  </div>
 </div>
 <script>
 'use strict';
@@ -462,7 +505,7 @@ function setImage(src,from,link){
 function noImage(link,name){
   els.img.removeAttribute('src');els.img.classList.remove('show');els.empty.style.display='';
   const g='https://www.google.com/search?tbm=isch&safe=active&q='+encodeURIComponent(name||els.q.value);
-  els.empty.innerHTML='<div class="big">🖼️</div><div>Wikipediaに画像がありませんでした</div><div><a href="'+g+'" target="_blank" rel="noopener">Google画像で探す ↗</a><br>見つけた画像をここにドラッグ＆ドロップ（または貼り付け）するとここに入るよ</div>';
+  els.empty.innerHTML='<div class="big">🎨</div><div>Wikipediaに画像がありませんでした</div><div><a href="'+g+'" target="_blank" rel="noopener">Google画像で探す ↗</a><br>見つけた画像をここにドラッグ＆ドロップ（または貼り付け）するとここに入るよ</div>';
   els.cap.innerHTML=link?'<span></span><a href="'+esc(link)+'" target="_blank" rel="noopener">記事を見る ↗</a>':'';
 }
 function renderChips(cands){
@@ -485,7 +528,7 @@ async function run(query,opt={}){
   busy(true);
   ['name','origin','age','like','dislike'].forEach(waiting);
   els.v.name.textContent=cleanTitle(q);els.v.name.className='main';
-  setImage(null);els.empty.innerHTML='<div class="big">🔍</div><div>しらべています…</div>';
+  setImage(null);els.empty.innerHTML='<div class="big">🔎</div><div>しらべています…</div>';
   try{
     const {primary,cands}=await resolve(q,opt);
     if(my!==seq) return;
@@ -616,7 +659,15 @@ async function handleTransfer(dt){
 els.photo.addEventListener('drop',e=>handleTransfer(e.dataTransfer));
 document.addEventListener('paste',e=>{if(document.activeElement===els.q)return;handleTransfer(e.clipboardData);});
 
-/* ---------- 8. 起動 ---------- */
+/* ---------- 8. 共有（URL・QR） ---------- */
+const SHARE_URL='https://guppi1009.github.io/profile-book/';
+$('shareBtn').onclick=()=>$('shareBox').classList.add('on');
+$('closeShare').onclick=()=>$('shareBox').classList.remove('on');
+$('shareBox').addEventListener('click',e=>{if(e.target===$('shareBox'))$('shareBox').classList.remove('on');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('shareBox').classList.remove('on');});
+$('copyUrl').onclick=async()=>{try{await navigator.clipboard.writeText(SHARE_URL);show('URLをコピーしました');}catch(e){const r=document.createRange();r.selectNodeContents($('shareUrl'));const s=getSelection();s.removeAllRanges();s.addRange(r);show('URLを選択しました。Ctrl+Cでコピーしてね');}};
+
+/* ---------- 9. 起動 ---------- */
 $('f').addEventListener('submit',e=>{e.preventDefault();run(els.q.value);});
 const init=new URLSearchParams(location.search).get('q')||decodeURIComponent(location.hash.slice(1));
 if(init){els.q.value=init;run(init);} else els.q.focus();
