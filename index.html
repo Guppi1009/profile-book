@@ -66,7 +66,7 @@ main.card{
 main.card::before,main.card::after{content:"";position:absolute;z-index:3;width:110px;height:26px;top:-6px;pointer-events:none;
   background:repeating-linear-gradient(135deg,var(--tape) 0 8px,rgba(255,255,255,.35) 8px 12px);opacity:.95;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 main.card::before{left:26px;transform:rotate(-6deg)}
-main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-gradient(135deg,var(--tape2) 0 8px,rgba(255,255,255,.35) 8px 12px)}
+main.card::after{right:70px;transform:rotate(5deg);background:repeating-linear-gradient(135deg,var(--tape2) 0 8px,rgba(255,255,255,.35) 8px 12px)}
 .photo{
   position:relative;min-height:0;display:grid;place-items:center;overflow:hidden;padding:clamp(14px,3vh,28px);
   background-color:var(--frame);background-image:radial-gradient(var(--frame-dot) 1.5px,transparent 1.7px);background-size:16px 16px;
@@ -90,20 +90,21 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
 .photo .cap{position:absolute;left:0;right:0;bottom:0;padding:4px 12px;font-size:clamp(10px,1.4vh,12px);color:var(--muted);background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:space-between;gap:8px}
 .photo .cap:empty{display:none}
 .photo .cap a{color:var(--link);text-decoration:none}
-.info{min-height:0;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));padding:clamp(8px,1.6vh,18px) clamp(14px,2.4vw,28px)}
+.info{min-height:0;display:grid;grid-template-rows:repeat(7,minmax(0,1fr));padding:clamp(6px,1.2vh,14px) clamp(14px,2.4vw,28px) clamp(6px,1.2vh,14px) clamp(14px,2.4vw,28px)}
 .row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:clamp(10px,1.6vw,18px);border-bottom:2px dotted var(--line);min-height:0;padding:2px 0}
 .row:last-child{border-bottom:0}
 .row .k{
   width:clamp(96px,10.5vw,132px);text-align:center;font-family:"Hachi Maru Pop","Zen Maru Gothic",sans-serif;font-size:clamp(12px,1.8vh,15px);letter-spacing:.04em;
   color:var(--label-ink);border-radius:999px;padding:5px 0;box-shadow:0 3px 0 rgba(0,0,0,.06);white-space:nowrap;
 }
-.row.name .k{background:var(--c-pink)} .row.origin .k{background:var(--c-mint)} .row.age .k{background:var(--c-yellow)} .row.like .k{background:var(--c-lavender)} .row.dislike .k{background:var(--c-sky)}
+.row.name .k{background:var(--c-pink)} .row.origin .k{background:var(--c-mint)} .row.age .k{background:var(--c-yellow)} .row.like .k{background:var(--c-lavender)} .row.dislike .k{background:var(--c-sky)} .row.can .k{background:#ffd9b8} .row.cant .k{background:#e6e6e6}
 .row .v{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
 .row .v .main{
-  font-weight:700;font-size:clamp(20px,3.8vh,36px);line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  font-weight:700;font-size:clamp(18px,3.1vh,30px);line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;
 }
-.row.name .v .main{font-size:clamp(20px,3.8vh,36px)}
-.row .v .sub{font-size:clamp(11px,1.6vh,14px);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.name .v .main{font-size:clamp(18px,3.1vh,30px)}
+.row .v .sub{font-size:clamp(10px,1.4vh,13px);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .v .sub .sq{color:var(--link);text-decoration:none;font-weight:700;padding:2px 8px;border:1.5px solid var(--line);border-radius:999px;background:var(--paper)}
 .row .v .main.none{color:var(--muted);font-weight:500}
 .row .v .main.wait{color:var(--muted);font-weight:500;font-size:clamp(14px,2.2vh,18px)}
 .row .v .main.wait::after{content:"…";animation:dots 1s steps(3,end) infinite}
@@ -114,29 +115,40 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
 #msg{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:var(--accent2);color:#fff;padding:8px 16px;border-radius:999px;font-size:clamp(12px,1.8vh,14px);opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center;z-index:5}
 #msg.on{opacity:.95}
 /* 共有パネル */
-#shareBox{position:fixed;inset:0;display:none;place-items:center;background:rgba(80,40,60,.45);z-index:20;padding:16px}
-#shareBox.on{display:grid}
-#shareBox .panel{background:var(--paper);border:3px solid var(--line);border-radius:26px;padding:22px 24px;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow);position:relative}
-#shareBox h2{font-family:"Hachi Maru Pop","Zen Maru Gothic",sans-serif;font-weight:400;font-size:20px;margin:0 0 6px;color:var(--accent2)}
-#shareBox p{margin:6px 0;font-size:14px;color:var(--muted)}
-#shareBox .qr{width:min(56vh,240px);height:auto;background:#fff;border-radius:12px;padding:6px;margin:8px auto;display:block}
-#shareBox .url{font-size:14px;word-break:break-all;background:var(--chip);border-radius:12px;padding:8px 10px;margin:8px 0;color:var(--ink)}
-#shareBox .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-#shareBox button{font:inherit;font-weight:700;font-size:14px;padding:9px 16px;border-radius:999px;border:0;cursor:pointer}
-#shareBox .copy{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
-#shareBox .close{background:var(--chip);color:var(--chip-ink)}
+#favBox{position:fixed;inset:0;display:none;place-items:center;background:rgba(80,40,60,.45);z-index:20;padding:16px}
+#favBox.on{display:grid}
+#favBox .panel{background:var(--paper);border:3px solid var(--line);border-radius:26px;padding:22px 24px;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow);position:relative}
+#favBox h2{font-family:"Hachi Maru Pop","Zen Maru Gothic",sans-serif;font-weight:400;font-size:20px;margin:0 0 6px;color:var(--accent2)}
+#favBox p{margin:6px 0;font-size:14px;color:var(--muted)}
+#favBox .qr{width:min(56vh,240px);height:auto;background:#fff;border-radius:12px;padding:6px;margin:8px auto;display:block}
+#favBox .url{font-size:14px;word-break:break-all;background:var(--chip);border-radius:12px;padding:8px 10px;margin:8px 0;color:var(--ink)}
+#favBox .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#favBox .favlist{max-height:52vh;overflow:auto;text-align:left;margin:8px 0;display:flex;flex-direction:column;gap:6px}
+#favBox .favrow{display:flex;align-items:center;gap:10px;border:2px solid var(--line);border-radius:14px;padding:6px 8px;background:var(--chip)}
+#favBox .favrow .th{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;font-size:22px}
+#favBox .favrow .th img{width:100%;height:100%;object-fit:cover}
+#favBox .favrow .nm{flex:1;text-align:left;font:inherit;font-weight:700;font-size:15px;background:none;border:0;color:var(--ink);cursor:pointer;padding:6px 0}
+#favBox .favrow .del{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:var(--paper);color:var(--muted);border:2px solid var(--line);font-size:16px;padding:0}
+.chip.fav{background:var(--c-yellow);border-color:#f3d77a}
+#favBtn{position:absolute;right:14px;top:10px;z-index:4;width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--paper);font-size:24px;line-height:1;cursor:pointer;color:#e0a800;box-shadow:0 3px 0 rgba(0,0,0,.06);padding:0}
+#favBtn.on{background:var(--c-yellow);border-color:#f3d77a}
+#favBox button{font:inherit;font-weight:700;font-size:14px;padding:9px 16px;border-radius:999px;border:0;cursor:pointer}
+#favBox .copy{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+#favBox .close{background:var(--chip);color:var(--chip-ink)}
 @media (max-width:700px), (orientation:portrait) and (max-width:1000px){
   #app{padding:10px 12px 12px}
   h1{font-size:19px}
-  main.card{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,38%) minmax(0,62%)}
+  main.card{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,34%) minmax(0,66%)}
   button.share{font-size:0;padding:8px 10px} button.share::before{content:"🔗";font-size:14px}
   main.card::before,main.card::after{width:80px;height:20px}
   .photo{border-right:0;border-bottom:3px dashed var(--line);padding:14px 16px 10px}
   .photo .pola{padding:6px;border-radius:14px}
   .info{padding:6px 12px}
   .row .k{width:88px;font-size:12px}
-  .row .v .main{font-size:clamp(17px,3vh,26px);-webkit-line-clamp:1}
-  .row.name .v .main{font-size:clamp(17px,3vh,26px)}
+  .row .v .main{font-size:clamp(15px,2.3vh,20px);-webkit-line-clamp:1}
+  .row.name .v .main{font-size:clamp(15px,2.3vh,20px)}
+  .row .v .sub{font-size:10px}
+  .row .k{width:96px;font-size:11px}
   .chip{max-width:60vw}
   button.share{padding:7px 10px}
 }
@@ -153,11 +165,12 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
       <label class="search"><span class="ico">🔍</span><input id="q" type="search" placeholder="名前を入れてね（例：大谷翔平・ドラえもん）" enterkeyhint="search" aria-label="名前を検索"></label>
       <button class="go" type="submit">しらべる♪</button>
     </form>
-    <button class="share" type="button" id="shareBtn" title="URLとQRコードを表示">🔗 みんなに共有</button>
+    <button class="share" type="button" id="favListBtn" title="お気に入りの一覧">⭐ お気に入り</button>
   </header>
   <div id="chips" aria-label="ほかの候補"></div>
   <main class="card">
     <div id="status"></div>
+    <button type="button" id="favBtn" title="お気に入りに登録" style="display:none">☆</button>
     <section class="photo" id="photo" aria-label="画像">
       <div class="pola"><img id="img" alt=""></div>
       <div class="empty" id="empty">
@@ -172,18 +185,21 @@ main.card::after{right:26px;transform:rotate(5deg);background:repeating-linear-g
       <div class="row age"><div class="k">🎂 年齢</div><div class="v"><div class="main" id="v-age"></div><div class="sub" id="s-age"></div></div></div>
       <div class="row like"><div class="k">💗 好きなもの</div><div class="v"><div class="main" id="v-like"></div><div class="sub" id="s-like"></div></div></div>
       <div class="row dislike"><div class="k">💦 嫌いなもの</div><div class="v"><div class="main" id="v-dislike"></div><div class="sub" id="s-dislike"></div></div></div>
+      <div class="row can"><div class="k">💪 できること</div><div class="v"><div class="main" id="v-can"></div><div class="sub" id="s-can"></div></div></div>
+      <div class="row cant"><div class="k">🙅 できないこと</div><div class="v"><div class="main" id="v-cant"></div><div class="sub" id="s-cant"></div></div></div>
     </section>
     <div id="msg"></div>
   </main>
   <input type="file" id="pick" accept="image/*" hidden>
 </div>
-<div id="shareBox" role="dialog" aria-modal="true" aria-label="みんなに共有">
+<div id="favBox" role="dialog" aria-modal="true" aria-label="お気に入り">
   <div class="panel">
-    <h2>🔗 みんなに共有</h2>
-    <p>スマホでQRコードを読むと、そのまま開けます</p>
-    <svg class="qr" width="198" height="198" class="segno"><path transform="scale(6)" class="qrline" stroke="#c2456b" d="M2 2.5h7m2 0h3m2 0h2m3 0h1m2 0h7m-29 1h1m5 0h1m1 0h1m1 0h1m4 0h5m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m4 0h1m2 0h1m5 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m2 0h4m1 0h1m3 0h1m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m3 0h5m1 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m4 0h1m2 0h3m2 0h1m2 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-20 1h2m2 0h5m1 0h2m-21 1h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h1m2 0h3m5 0h1m2 0h1m-28 1h1m3 0h2m1 0h1m2 0h2m4 0h1m3 0h3m2 0h1m2 0h1m-29 1h3m1 0h1m1 0h1m3 0h1m2 0h1m2 0h2m6 0h1m1 0h3m-29 1h1m4 0h1m3 0h1m3 0h5m1 0h1m3 0h1m3 0h1m-28 1h1m3 0h1m1 0h1m1 0h2m1 0h3m1 0h3m1 0h2m1 0h2m1 0h1m1 0h2m-29 1h1m1 0h1m2 0h1m6 0h1m3 0h1m3 0h1m1 0h1m2 0h1m2 0h1m-28 1h1m1 0h1m2 0h3m4 0h2m3 0h1m3 0h1m1 0h2m1 0h2m-29 1h1m4 0h1m1 0h1m1 0h2m2 0h3m1 0h2m1 0h1m2 0h1m1 0h1m1 0h1m-27 1h1m1 0h1m2 0h2m1 0h1m1 0h7m2 0h1m1 0h2m1 0h1m1 0h2m-26 1h1m3 0h2m3 0h1m3 0h1m3 0h1m1 0h1m2 0h2m1 0h1m-29 1h1m1 0h2m2 0h4m2 0h2m2 0h2m2 0h1m1 0h3m2 0h2m-28 1h3m3 0h1m3 0h4m1 0h3m1 0h2m3 0h1m1 0h1m-28 1h1m3 0h3m1 0h1m1 0h2m2 0h1m1 0h9m-17 1h1m1 0h1m1 0h2m2 0h1m2 0h2m3 0h1m1 0h3m-29 1h7m4 0h1m2 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h2m-29 1h1m5 0h1m5 0h2m2 0h5m3 0h2m-26 1h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h4m2 0h5m-25 1h1m1 0h3m1 0h1m4 0h2m3 0h3m2 0h1m2 0h1m1 0h3m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h2m1 0h1m1 0h1m2 0h1m1 0h3m2 0h1m-29 1h1m5 0h1m3 0h2m2 0h1m2 0h1m2 0h2m2 0h1m2 0h1m-28 1h7m1 0h3m6 0h1m2 0h1m1 0h3m2 0h2"/></svg>
-    <div class="url" id="shareUrl">https://guppi1009.github.io/profile-book/</div>
-    <div class="btns"><button class="copy" id="copyUrl" type="button">URLをコピー</button><button class="close" id="closeShare" type="button">とじる</button></div>
+    <h2>⭐ お気に入り</h2>
+    <p>カードの ☆ を押すと、この端末に登録されます</p>
+    <div class="favlist" id="favList"></div>
+    <div class="btns"><button class="close" id="closeFav" type="button">とじる</button></div>
+  </div>
+</div>
   </div>
 </div>
 <script>
@@ -198,8 +214,8 @@ const GOOGLE_CSE_ID  = '';
 const $ = id => document.getElementById(id);
 const els = {
   q:$('q'), chips:$('chips'), img:$('img'), empty:$('empty'), cap:$('cap'), photo:$('photo'), status:$('status'), msg:$('msg'),
-  v:{name:$('v-name'),origin:$('v-origin'),age:$('v-age'),like:$('v-like'),dislike:$('v-dislike')},
-  s:{name:$('s-name'),origin:$('s-origin'),age:$('s-age'),like:$('s-like'),dislike:$('s-dislike')},
+  v:{name:$('v-name'),origin:$('v-origin'),age:$('v-age'),like:$('v-like'),dislike:$('v-dislike'),can:$('v-can'),cant:$('v-cant')},
+  s:{name:$('s-name'),origin:$('s-origin'),age:$('s-age'),like:$('s-like'),dislike:$('s-dislike'),can:$('s-can'),cant:$('s-cant')},
 };
 const JA='https://ja.wikipedia.org/w/api.php', EN='https://en.wikipedia.org/w/api.php', WD='https://www.wikidata.org/w/api.php';
 const PERSONA=/人物|キャラクター|character|主人公|架空|ロボット|ポケモン|Pokémon|選手|俳優|女優|歌手|声優|タレント|芸人|漫画家|作家|政治家|武将|大名|天皇|皇帝|国王|女王|将軍|学者|画家|音楽家|作曲家|発明家|実業家|YouTuber|アイドル|ヒーロー|妖怪|マスコット|ゆるキャラ|ライター|プロデューサー|監督|棋士|力士|レスラー|お笑い/i;
@@ -361,7 +377,8 @@ function characterSection(text,name){
   for(let j=i+1;j<secs.length&&secs[j].lvl>lvl;j++) body+='\n=== '+secs[j].h+' ===\n'+secs[j].body;
   return body;
 }
-const JUNK=/^(以前|当初|一方|ため|こと|これ|それ|あれ|もの|自分|自身|本人|相手|彼|彼女|多く|ある|いる|なる|する|した|特に|主に|他|その他|何|誰|人|全て|すべて|全員|皆|みんな|一部|大半|ほとんど|時|頃|後|前|中|上|下|方|際|場合|点|面|事|物|者|形|例|際に|時に|なにより|何より|誰より|一番|最も|もっとも|いう|という|同様|同じ|これら|それら|以上|以下|以外)$/;
+let CUR_NAME='';
+const JUNK=/^(隙|威力|技|能力|力|才能|実力|存在|状態|様子|姿|自体|全体|以前|当初|一方|ため|こと|これ|それ|あれ|もの|自分|自身|本人|相手|彼|彼女|多く|ある|いる|なる|する|した|特に|主に|他|その他|何|誰|人|全て|すべて|全員|皆|みんな|一部|大半|ほとんど|時|頃|後|前|中|上|下|方|際|場合|点|面|事|物|者|形|例|際に|時に|なにより|何より|誰より|一番|最も|もっとも|いう|という|同様|同じ|これら|それら|以上|以下|以外)$/;
 function tidy(s){
   s=(s||'').normalize('NFKC').replace(/[（(][^）)]*[）)]/g,'').replace(/[「」『』"'“”]/g,'')
     .replace(/^[はもがを、。：:\s]+/,'')
@@ -376,10 +393,13 @@ function tidy(s){
   return s;
 }
 function okItem(v){
-  if(!v||v.length<1||v.length>16) return false;
+  if(!v||v.length<1||v.length>14) return false;
   if(JUNK.test(v)) return false;
   if(/(ません|ます|です|のに|けど|だが|から$|ので$|ため|間違|思っ|言っ|語っ|述べ|答え|話し|受け|反撃|攻撃|によれ|によると|として$|より|の頃|時代|方法|場合|らしい|関わ|等身大|だけ|以外|のみ|嫌いなもの|好きなもの|苦手なもの)/.test(v)) return false;
-  if(/^(いう|という|この|その|あの|どの|ある|いる|同じ|同様)/.test(v)) return false;
+  if(/^(いう|という|この|その|あの|どの|ある|いる|同じ|同様|して|した|いた|され|する|なる|周囲|周り|相手|自ら|自分|まだ|もう|また|ただ)/.test(v)) return false;
+  if(/して|されて|していた|ず$|\d+[~〜]\d+|の為$|ため$|って|いて|んで|えて|付いて|乗った|^(?:撮影|使用|作|変え|行|行ったり|考え|見|言|聞|持|取|出|入|来|生き|死|殺|治|治療|回復|移動|変化|成長|存在)(?:する|う|る|く|ぐ|す|つ|む|え|け|せ|て|ね|べ|め|れ)?こと$/.test(v)) return false;
+  if(/^[ぁ-ん]/.test(v)&&!(/^[ぁ-んー]+$/.test(v)&&v.length>=2&&!/(こと|もの|ます|れる|ない|ある|いる)$/.test(v))&&!/^[おご][一-龥ァ-ヶ]/.test(v)) return false; // ひらがな始まりは全部ひらがなの語だけ（「らうこと」などの切れ端を除外）
+  if(CUR_NAME&&(CUR_NAME.includes(v)||v.includes(CUR_NAME))) return false;
   if(/^[A-Za-z0-9]{2,6}$/.test(v)) return false;
   if(/[ぁ-ん]{2,}[一-龥]+[ぁ-ん]{2,}/.test(v)&&!/(の|な)[一-龥]/.test(v)) return false;
   if(/(する|した|している|される|れる|える|ある|いる|なる|った|きた|ない|たい|しい|う|く|べき|ため|こと|の|に|へ|と|で|が|を|は|も)$/.test(v)&&!/(こと|もの)$/.test(v)) return false;
@@ -406,7 +426,7 @@ function pick(text,patterns,max){
   }
   return found;
 }
-const NOUN='[^、。\\n（）()「」『』がをはもへ]{1,18}?';
+const NOUN='(?:^|(?<=[、。\\n（）()「」『』がをはもにでとへや・\\s]))[^、。\\n（）()「」『』がをはもへ]{1,18}?';
 const LIKE_HEAD=/好|趣味|嗜好|好物/, DIS_HEAD=/苦手|嫌|弱点/;
 const PERSONA_HEAD=/人物|性格|人柄|プロフィール|設定|特徴|概要|概説|来歴|生涯|エピソード|逸話|嗜好|私生活|家族|人間関係|能力|容姿|生い立ち/;
 const SKIP_HEAD=/作品|ゲーム|映画|アニメ|登場|関連|評価|反響|脚注|出典|参考|外部リンク|商品|グッズ|メディア|シリーズ|一覧|歴史|沿革|受賞|ディスコグラフィ|出演|著書|舞台|楽曲|放送|スタッフ|声優|キャスト|用語|世界観|派生|展開|批評|論争|訴訟|論文|書誌|研究|影響|年表|略歴/;
@@ -422,6 +442,10 @@ function extractLikes(text){
     /(?:大?好物|好きな(?:もの|物|食べ物|食べもの|こと|事|人|動物|言葉|教科|科目|食べ物や飲み物))(?:は|：|:|が|も|として|には)((?:(?!嫌い|苦手|弱点)[^。\n]){1,50})/,
     /趣味(?:は|：|:|が|も|として)((?:(?!嫌い|苦手)[^。\n]){1,50})/,
     new RegExp('('+NOUN+')(?:が|を|は|も)(?:なにより|何より|一番|とても|大変|非常に|かなり|とにかく|本当に|結構|割と|特に|大の)?(?:も)?(?:大好き|大好物|好き|好物|お気に入り|好んで|好み|好む)'),
+    /(?:好きな(?:アーティスト|歌手|ミュージシャン|作家|作品|漫画|アニメ|映画|音楽|曲|スポーツ|色|季節|場所|キャラクター|選手|チーム|球団|番組|ゲーム|花|動物|お菓子|飲み物|料理|本|言葉|タイプ)|愛読書|愛聴盤|愛車|愛用(?:品|の(?:もの|物|道具))?|尊敬する(?:人物|人|選手|先輩)|憧れ(?:の(?:人|人物|選手|存在|職業))?|マイブーム|得意(?:料理|技|科目|なこと|なもの|分野)|特技)(?:は|：|:)((?:(?!嫌い|苦手)[^。\n]){1,50})/,
+    new RegExp('('+NOUN+')の(?:大?ファン|愛好家|マニア|信者|熱狂的なファン)(?:で|を|と|だ|である|として|であり|と公言)'),
+    new RegExp('('+NOUN+')(?:を|が)(?:愛用|愛読|愛聴|愛して|こよなく愛|溺愛|愛好|敬愛|崇拝|尊敬)'),
+    new RegExp('('+NOUN+')(?:に)(?:憧れ|ハマ|夢中)'),
   ];
   let r=[];
   for(const t of tiers(text,LIKE_HEAD)){ if(t){r=pick(t,pats,4);if(r.length)break;} }
@@ -430,11 +454,81 @@ function extractLikes(text){
 function extractDislikes(text){
   const pats=[
     /(?:嫌いな(?:もの|物|食べ物|食べもの|こと|事|人|言葉)|苦手な(?:もの|物|食べ物|食べもの|こと|事|人|教科|科目)|弱点)(?:は|：|:|が|も|として|には)((?:(?!好き|好物|趣味)[^。\n]){1,50})/,
-    new RegExp('('+NOUN+')(?:が|を|は|も)(?:なにより|何より|一番|とても|大変|非常に|かなり|とにかく|本当に|結構|割と|特に|大の)?(?:も)?(?:大の苦手|大嫌い|苦手|嫌い|嫌っている|嫌う|恐れている|怖がる|怖い)'),
+    new RegExp('('+NOUN+')(?:が|を|は|も)(?:なにより|何より|一番|とても|大変|非常に|かなり|とにかく|本当に|結構|割と|特に|大の)?(?:も)?(?:大の苦手|大嫌い|苦手|嫌い|嫌っている|嫌う|恐れている|怖がる|怖い|不得意|不得手|ダメ|駄目|トラウマ|NG|忌避|嫌悪)'),
+    /(?:天敵|トラウマ|苦手意識)(?:は|：|:|が)((?:(?!好き|好物)[^。\n]){1,50})/,
+    new RegExp('('+NOUN+')(?:アレルギー|恐怖症|嫌い)(?:で|だ|である|であり|を|が|と|、|。)'),
   ];
   let r=[];
   for(const t of tiers(text,DIS_HEAD)){ if(t){r=pick(t,pats,4);if(r.length)break;} }
   return r.join('・').slice(0,30);
+}
+function enTidy(s){
+  s=(s||'').replace(/\([^)]*\)/g,'').replace(/^(?:the|a|an|his|her|their|its|to|of)\s+/i,'').split(/\s+(?:and|but|because|which|who|that|as|when|while|although|though|since|so|despite)\s+|[,;:]/)[0].trim().replace(/[.\s]+$/,'');
+  return s.length>=2&&s.length<=30&&!/\b(?:he|she|they|it|him|her|them|this|that|these|those|his|her|their)\b/i.test(s)&&!/^(?:not|no|never|only|even|also|be|being|been|do|does|did|have|has|had)\b/i.test(s)?s:'';
+}
+function enPick(text,pats,max){
+  const out=[];
+  for(const re of pats){const g=new RegExp(re.source,'gi');let m;
+    while((m=g.exec(text))&&out.length<max){for(const part of m[1].split(/,|\band\b/)){const v=enTidy(part);if(v&&!out.includes(v)&&out.length<max)out.push(v);}}
+    if(out.length) return out;}
+  return out;
+}
+function extractLikesEn(text){
+  return enPick(text,[
+    /favou?rite (?:foods?|things?|dish|dishes|hobby|hobbies|colou?r|subjects?|sports?|animals?|music|drinks?|snacks?|meals?|games?|books?|movies?|films?|bands?|singers?|pastimes?)\s*(?:is|are|include[s]?|:|being)\s+([^.\n]{1,60})/,
+    /(?:is|are|was)\s+(?:very |extremely |particularly |especially )?fond of\s+([^.\n]{1,50})/,
+    /(?:he|she|they|it)\s+(?:really |also |especially |particularly )?(?:likes|loves|enjoys|adores)\s+(?:to\s+)?([^.\n]{1,50})/,
+    /has a (?:passion|fondness|love|weakness) for\s+([^.\n]{1,50})/,
+  ],3);
+}
+function extractDislikesEn(text){
+  return enPick(text,[
+    /(?:he|she|they|it)\s+(?:really |also |especially |particularly )?(?:dislikes|hates|detests|despises|fears|is afraid of|is terrified of|cannot stand|can't stand|is scared of|loathes)\s+([^.\n]{1,50})/,
+    /(?:least favou?rite|weakness(?:es)?|phobia)\s*(?:is|are|include[s]?|:|of)\s+([^.\n]{1,50})/,
+    /(?:is|are)\s+(?:allergic to|weak against|vulnerable to)\s+([^.\n]{1,40})/,
+  ],3);
+}
+function extractAgeEn(text){
+  const m=/\b(\d{1,2})[- ]year[- ]old\b/.exec(text.slice(0,8000))||/\baged\s+(\d{1,2})\b/.exec(text.slice(0,8000));
+  return m?m[1]+'歳':'';
+}
+const CAN_HEAD=/特技|能力|得意|技|才能|資格|スキル/, CANT_HEAD=/苦手|不得意|弱点|欠点/;
+function extractCan(text){
+  const pats=[
+    /(?:特技|得意(?:技|科目|教科|分野|なこと|なもの|料理|スポーツ|楽器)|持っている資格|資格|取得資格|できること|能力)(?:は|：|:|として)((?:(?!苦手|不得意|できない)[^。\n]){1,50})/,
+    new RegExp('('+NOUN+')(?:が|を|は|も)(?:とても|非常に|かなり|特に|大変)?(?:得意|上手|うまい|巧み|堪能|ペラペラ|達者|特技)'),
+    new RegExp('('+NOUN+')(?:が|を|は|も)(?:できる|出来る|こなせる|弾ける|話せる|作れる|使える|操れる|描ける|歌える|泳げる|走れる)'),
+    new RegExp('('+NOUN+')(?:を)(?:得意と|操る|使いこなす|習得|マスター|会得)'),
+    new RegExp('('+NOUN+')(?:に)(?:長け|秀で|優れ|精通|通じ)'),
+  ];
+  let r=[];
+  for(const t of tiers(text,CAN_HEAD)){ if(t){r=pick(t,pats,4);if(r.length)break;} }
+  return r.join('・').slice(0,30);
+}
+function extractCant(text){
+  const pats=[
+    /(?:不得意(?:なもの|科目|教科|分野|なこと)?|苦手(?:なもの|科目|教科|分野|なこと)|できないこと|弱点)(?:は|：|:|として)((?:(?!得意|好き)[^。\n]){1,50})/,
+    new RegExp('('+NOUN+')(?:が|を|は|も)(?:全く|まったく|一切|あまり|ほとんど|ほぼ)?(?:できない|出来ない|不得意|不得手|下手|苦手|不慣れ|音痴|弾けない|話せない|泳げない|作れない|使えない|読めない|書けない|乗れない|食べられない|飲めない)'),
+    new RegExp('('+NOUN+')(?:に|には)(?:弱い|めっぽう弱い|向いていない)'),
+  ];
+  let r=[];
+  for(const t of tiers(text,CANT_HEAD)){ if(t){r=pick(t,pats,4);if(r.length)break;} }
+  return r.join('・').slice(0,30);
+}
+function extractCanEn(text){
+  return enPick(text,[
+    /(?:is|are|was)\s+(?:very |highly |extremely |exceptionally |particularly )?(?:skilled|proficient|talented|gifted|adept|good|excellent|accomplished|fluent)\s+(?:at|in|with)\s+([^.\n]{1,50})/,
+    /(?:he|she|they|it)\s+(?:can|is able to|is capable of)\s+([^.\n]{1,50})/,
+    /(?:excels|specializes|specialises)\s+(?:at|in)\s+([^.\n]{1,50})/,
+    /(?:has|have)\s+the ability to\s+([^.\n]{1,50})/,
+  ],3);
+}
+function extractCantEn(text){
+  return enPick(text,[
+    /(?:he|she|they|it)\s+(?:cannot|can't|can not|is unable to|is incapable of|struggles to|fails to)\s+([^.\n]{1,50})/,
+    /(?:is|are)\s+(?:very |extremely |notoriously )?(?:bad|poor|terrible|hopeless|weak|inept|unskilled)\s+(?:at|in|with)\s+([^.\n]{1,50})/,
+    /(?:struggles|has difficulty|has trouble)\s+(?:with|in)\s+([^.\n]{1,50})/,
+  ],3);
 }
 function extractReading(intro,title){
   const t=norm(cleanTitle(title));
@@ -507,8 +601,14 @@ async function googleImage(q){
 function loadImg(src){return new Promise(res=>{const im=new Image();im.onload=()=>res(true);im.onerror=()=>res(false);im.referrerPolicy='no-referrer';im.src=src;});}
 
 /* ---------- 5. 描画 ---------- */
+const FIELD_Q={origin:'出身',age:'年齢',like:'好きなもの',dislike:'嫌いなもの',can:'得意なこと',cant:'苦手なこと'};
 function setField(k,main,sub,cls){
   els.v[k].textContent=main||'ー';els.v[k].className='main'+(main?'':' none')+(cls?' '+cls:'');els.v[k].title=main||'';
+  if(!main&&FIELD_Q[k]){ // 見つからない項目は、その場でGoogle検索をタップできるようにする
+    const q=currentName()+' '+FIELD_Q[k];
+    els.s[k].innerHTML=(sub?esc(sub)+'　':'')+'<a class="sq" href="https://www.google.com/search?safe=active&q='+encodeURIComponent(q)+'" target="_blank" rel="noopener">🔍 Googleで調べる ↗</a>';
+    els.s[k].title=sub||'';return;
+  }
   els.s[k].textContent=sub||'';els.s[k].title=sub||'';
 }
 function waiting(k){els.v[k].textContent='しらべ中';els.v[k].className='main wait';els.s[k].textContent='';}
@@ -517,6 +617,7 @@ function setImage(src,from,link){
   els.img.classList.remove('show');
   if(!src){els.img.removeAttribute('src');els.empty.style.display='';els.cap.innerHTML='';return;}
   els.img.src=src;els.img.onload=()=>{els.img.classList.add('show');els.empty.style.display='none';};
+  if(current&&!/^data:/.test(src)) current.img=src;
   els.img.onerror=()=>{noImage(link);};
   els.cap.innerHTML='<span>画像：'+esc(from)+'</span><span><button type="button" class="capbtn" id="changeImg">🔄 かえる</button>'+(link?' <a href="'+esc(link)+'" target="_blank" rel="noopener">記事を見る ↗</a>':'')+'</span>';
   $('changeImg').onclick=openChooser;
@@ -544,7 +645,7 @@ function openChooser(){ // 画像を差し替えたいとき
   els.empty.innerHTML=chooserHTML(currentName(),'べつの画像にする');wireChooser();
 }
 function renderChips(cands){
-  els.chips.innerHTML='';
+  els.chips.innerHTML='';els.chips.dataset.favs='0';
   const names=cands.map(c=>cleanTitle(c.title||c.label||''));
   cands.forEach((c,i)=>{
     const b=document.createElement('button');b.type='button';b.className='chip';
@@ -561,7 +662,7 @@ const EXTRACT={action:'query',redirects:1,prop:'extracts|pageimages|description|
 async function run(query,opt={}){
   const my=++seq; const q=query.trim(); if(!q) return;
   busy(true);
-  ['name','origin','age','like','dislike'].forEach(waiting);
+  ['name','origin','age','like','dislike','can','cant'].forEach(waiting);
   els.v.name.textContent=cleanTitle(q);els.v.name.className='main';
   setImage(null);els.empty.innerHTML='<div class="big">🔎</div><div>しらべています…</div>';
   try{
@@ -609,6 +710,7 @@ async function run(query,opt={}){
     const desc=(ent&&ent.descriptions&&ent.descriptions.ja&&ent.descriptions.ja.value)||(!sectionOf&&page&&page.description)||primary.desc||'';
     const intro=(sectionOf?body:text).split(/\n==/)[0];
     setField('name',dispName,[sectionOf?'':extractReading(intro,dispName),desc].filter(Boolean).join('　'));
+    current={name:dispName,title:sectionOf?null:title,qid:primary.qid||null,img:null};updateFavBtn();CUR_NAME=dispName;
 
     // 画像：候補を順に試し、実際に読み込めた最初の1枚を使う
     (async()=>{
@@ -633,11 +735,14 @@ async function run(query,opt={}){
     const isHuman=ent&&claimVals(ent,'P31').some(v=>v.id==='Q5');
     let originMain='',originSub='',ageMain='',ageSub='';
     const p19=ent&&claimVals(ent,'P19')[0], p27=ent&&claimVals(ent,'P27')[0], p1441=ent?claimVals(ent,'P1441').slice(0,5):[], p1080=ent&&claimVals(ent,'P1080')[0];
-    const ids=[];[p19,p27,p1080,...p1441].forEach(v=>v&&v.id&&!ids.includes(v.id)&&ids.push(v.id));
+    const p106=ent?claimVals(ent,'P106').slice(0,3):[], p2563=ent?claimVals(ent,'P2563').slice(0,3):[];
+    const ids=[];[p19,p27,p1080,...p1441,...p106,...p2563].forEach(v=>v&&v.id&&!ids.includes(v.id)&&ids.push(v.id));
     let labels={};
     if(ids.length){const L=await getJSON(WD,{action:'wbgetentities',ids:ids.join('|'),props:'labels',languages:'ja|en'}).catch(()=>null);if(L&&L.entities)for(const k in L.entities){const lb=L.entities[k].labels||{};labels[k]=(lb.ja||lb.en||{}).value||'';}}
     if(my!==seq) return;
     const textOrigin=extractOrigin(body);
+    const OCC={'野球選手':'野球','プロ野球選手':'野球','サッカー選手':'サッカー','歌手':'歌','シンガーソングライター':'歌と作曲','俳優':'演技','女優':'演技','漫画家':'漫画を描く','小説家':'小説を書く','作家':'文章を書く','詩人':'詩を書く','政治家':'政治','将棋棋士':'将棋','棋士':'将棋','囲碁棋士':'囲碁','フィギュアスケート選手':'フィギュアスケート','ピアニスト':'ピアノ','画家':'絵を描く','声優':'声の演技','料理人':'料理','YouTuber':'動画づくり','お笑いタレント':'お笑い','お笑い芸人':'お笑い','漫才師':'漫才','武将':'戦','大名':'国をおさめる','作曲家':'作曲','音楽家':'音楽','ダンサー':'ダンス','バレエダンサー':'バレエ','テニス選手':'テニス','バスケットボール選手':'バスケットボール','水泳選手':'水泳','陸上競技選手':'陸上競技','柔道家':'柔道','力士':'相撲','プロレスラー':'プロレス','ボクサー':'ボクシング','発明家':'発明','物理学者':'物理学','数学者':'数学','天文学者':'天文学','医師':'医学','建築家':'建築','写真家':'写真','映画監督':'映画づくり','アニメーター':'アニメを描く','イラストレーター':'イラストを描く','ゲームクリエイター':'ゲームづくり','宇宙飛行士':'宇宙飛行','探検家':'探検','僧':'仏教','僧侶':'仏教','歌人':'和歌','俳人':'俳句','女房':'宮仕え','軍人':'軍事','実業家':'経営','教師':'教えること','教育者':'教えること'};
+    const occupations=[...p106,...p2563].map(v=>labels[v.id]).filter(Boolean).map(l=>OCC[l]||l.replace(/選手$/,'')).filter((v,i,a)=>a.indexOf(v)===i).slice(0,3);
     const work=p1441.map(v=>labels[v.id]).filter(Boolean).sort((a,b)=>(text.includes(b)?1:0)-(text.includes(a)?1:0))[0];
     if(p19&&labels[p19.id]){originMain=labels[p19.id];if(p27&&labels[p27.id]&&labels[p27.id]!==originMain)originSub=labels[p27.id];}
     else if(textOrigin){originMain=textOrigin;if(p27&&labels[p27.id])originSub=labels[p27.id];}
@@ -658,14 +763,33 @@ async function run(query,opt={}){
     else if(bday){ageSub='誕生日：'+bday;}
     setField('age',ageMain,ageSub);
 
-    // 好き・嫌い（本文から）
-    const like=extractLikes(body), dis=extractDislikes(body);
+    // 好き・嫌い（日本語の本文 → 無ければ英語版の本文）
+    let like=extractLikes(body), dis=extractDislikes(body), can=extractCan(body), cant=extractCant(body);
+    const dropDup=(a,b)=>a.split('・').filter(x=>!b.split('・').includes(x)).join('・'); // 同じ語が2項目に出ないように
+    cant=dropDup(cant,dis); can=dropDup(can,like);
+    if(!can&&occupations.length){can=occupations.join('・').slice(0,30);}
     const src=sectionOf?'Wikipedia「'+cleanTitle(sectionOf)+'」より':'Wikipediaの記事より';
-    setField('like',like,like?src:(body?'記事に書かれていません':'日本語の記事がありません'));
-    setField('dislike',dis,dis?src:(body?'記事に書かれていません':'日本語の記事がありません'));
+    let likeSub=like?src:'', disSub=dis?src:'', canSub=can?src:'', cantSub=cant?src:'';
+    if((!like||!dis||!can||!cant||!ageMain)&&enTitle){
+      const E=await getJSON(EN,{action:'query',titles:enTitle,redirects:1,prop:'extracts',explaintext:1,exlimit:1}).catch(()=>null);
+      if(my!==seq) return;
+      const et=(E&&E.query&&E.query.pages&&E.query.pages[0]&&E.query.pages[0].extract)||'';
+      if(et){
+        if(!like){const r=extractLikesEn(et);if(r.length){like=r.join('・').slice(0,34);likeSub='英語版Wikipediaより';}}
+        if(!dis){const r=extractDislikesEn(et);if(r.length){dis=r.join('・').slice(0,34);disSub='英語版Wikipediaより';}}
+        if(!can){const r=extractCanEn(et);if(r.length){can=r.join('・').slice(0,34);canSub='英語版Wikipediaより';}}
+        if(!cant){const r=extractCantEn(et);if(r.length){cant=r.join('・').slice(0,34);cantSub='英語版Wikipediaより';}}
+        if(!ageMain&&!isHuman){const a=extractAgeEn(et);if(a){setField('age',a,'英語版Wikipediaより（作中の設定）');}}
+      }
+    }
+    setField('like',like,like?likeSub:(body?'記事に書かれていません':'日本語の記事がありません'));
+    setField('dislike',dis,dis?disSub:(body?'記事に書かれていません':'日本語の記事がありません'));
+    setField('can',can,can?(canSub||'Wikidataの職業・能力より'):(body?'記事に書かれていません':'日本語の記事がありません'));
+    setField('cant',cant,cant?cantSub:(body?'記事に書かれていません':'日本語の記事がありません'));
   }catch(e){
     if(my!==seq) return;
-    ['origin','age','like','dislike'].forEach(k=>setField(k,'',''));
+    ['origin','age','like','dislike','can','cant'].forEach(k=>setField(k,'',''));
+    current=null;updateFavBtn();
     if(e&&e.message==='notfound'){setField('name',cleanTitle(q),'見つかりませんでした');noImage('',q);show('見つかりませんでした。別の言い方で試してみてね');}
     else{setField('name',cleanTitle(q),'通信エラー');show('通信に失敗しました。もう一度試してみてね');console.error(e);}
   }finally{ if(my===seq) busy(false); }
@@ -712,18 +836,45 @@ async function handleTransfer(dt){
 els.photo.addEventListener('drop',e=>handleTransfer(e.dataTransfer));
 document.addEventListener('paste',e=>{if(document.activeElement===els.q)return;handleTransfer(e.clipboardData);});
 
-/* ---------- 8. 共有（URL・QR） ---------- */
-const SHARE_URL='https://guppi1009.github.io/profile-book/';
-$('shareBtn').onclick=()=>$('shareBox').classList.add('on');
-$('closeShare').onclick=()=>$('shareBox').classList.remove('on');
-$('shareBox').addEventListener('click',e=>{if(e.target===$('shareBox'))$('shareBox').classList.remove('on');});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')$('shareBox').classList.remove('on');});
-$('copyUrl').onclick=async()=>{try{await navigator.clipboard.writeText(SHARE_URL);show('URLをコピーしました');}catch(e){const r=document.createRange();r.selectNodeContents($('shareUrl'));const s=getSelection();s.removeAllRanges();s.addRange(r);show('URLを選択しました。Ctrl+Cでコピーしてね');}};
+/* ---------- 8. お気に入り（この端末に保存） ---------- */
+let current=null; // いま表示中のプロフィール {name,title,qid,img}
+function getFavs(){try{return JSON.parse(localStorage.getItem('pb_favs')||'[]');}catch(e){return [];}}
+function saveFavs(a){try{localStorage.setItem('pb_favs',JSON.stringify(a.slice(0,60)));}catch(e){show('保存できませんでした（端末の空き容量）');}}
+function isFav(n){return getFavs().some(f=>f.name===n);}
+function updateFavBtn(){const b=$('favBtn');if(!current){b.style.display='none';return;}b.style.display='';const on=isFav(current.name);b.textContent=on?'★':'☆';b.classList.toggle('on',on);b.title=on?'お気に入りから外す':'お気に入りに登録';}
+function toggleFav(){
+  if(!current) return; let favs=getFavs();
+  if(isFav(current.name)){favs=favs.filter(f=>f.name!==current.name);saveFavs(favs);show('お気に入りから外しました');}
+  else{favs.unshift({name:current.name,title:current.title||null,qid:current.qid||null,img:(current.img&&!/^data:/.test(current.img))?current.img:null,at:Date.now()});saveFavs(favs);show('⭐ お気に入りに登録しました');}
+  updateFavBtn(); if(!els.chips.children.length||els.chips.dataset.favs==='1') renderFavChips();
+}
+function openFav(f){$('favBox').classList.remove('on');els.q.value=f.name;run(f.name,f.title?{title:f.title}:(f.qid?{qid:f.qid,label:f.name}:{}));}
+function renderFavChips(){ // 検索前はお気に入りをチップで並べる
+  const favs=getFavs(); els.chips.innerHTML=''; els.chips.dataset.favs='1';
+  favs.forEach(f=>{const b=document.createElement('button');b.type='button';b.className='chip fav';b.textContent='⭐ '+f.name;b.onclick=()=>openFav(f);els.chips.appendChild(b);});
+}
+function renderFavList(){
+  const favs=getFavs(); const box=$('favList'); box.innerHTML='';
+  if(!favs.length){box.innerHTML='<p>まだ登録がありません。しらべたあとにカードの ☆ を押してね</p>';return;}
+  favs.forEach(f=>{
+    const row=document.createElement('div');row.className='favrow';
+    const th=document.createElement('div');th.className='th';if(f.img){const im=document.createElement('img');im.src=getManual(f.name)||f.img;im.alt='';im.referrerPolicy='no-referrer';th.appendChild(im);}else th.textContent='📖';
+    const nm=document.createElement('button');nm.type='button';nm.className='nm';nm.textContent=f.name;nm.onclick=()=>openFav(f);
+    const del=document.createElement('button');del.type='button';del.className='del';del.textContent='×';del.title='外す';del.onclick=()=>{saveFavs(getFavs().filter(x=>x.name!==f.name));renderFavList();updateFavBtn();if(els.chips.dataset.favs==='1')renderFavChips();};
+    row.append(th,nm,del);box.appendChild(row);
+  });
+}
+$('favBtn').onclick=toggleFav;
+$('favListBtn').onclick=()=>{renderFavList();$('favBox').classList.add('on');};
+$('closeFav').onclick=()=>$('favBox').classList.remove('on');
+$('favBox').addEventListener('click',e=>{if(e.target===$('favBox'))$('favBox').classList.remove('on');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('favBox').classList.remove('on');});
 
 /* ---------- 9. 起動 ---------- */
 $('f').addEventListener('submit',e=>{e.preventDefault();run(els.q.value);});
 const init=new URLSearchParams(location.search).get('q')||decodeURIComponent(location.hash.slice(1));
-if(init){els.q.value=init;run(init);} else els.q.focus();
+if(init){els.q.value=init;run(init);} else {els.q.focus();renderFavChips();}
+updateFavBtn();
 </script>
 </body>
 </html>
