@@ -474,7 +474,7 @@ async function wikiImage(base,title){
   const r2=await getJSON(EN,{action:'query',titles:p.title,generator:'images',gimlimit:20,prop:'imageinfo',iiprop:'url|mime|size',iiurlwidth:900}).catch(()=>null);
   const files=(r2&&r2.query&&r2.query.pages||[]).map(f=>({t:f.title,i:(f.imageinfo||[])[0]||{}})).filter(f=>/image\/(jpeg|png|webp)/.test(f.i.mime||'')&&(f.i.width||0)>=80);
   const toks=p.title.toLowerCase().split(/[^a-z0-9]+/).filter(t=>t.length>=3);
-  const sc=f=>{const n=f.t.toLowerCase();return (toks.some(t=>n.includes(t))?3:0)+(/\/wikipedia\/en\//.test(f.i.url||'')?2:0)-(/logo|icon|symbol|flag|map/.test(n)?4:0);};
+  const sc=f=>{const n=f.t.toLowerCase();return toks.filter(t=>n.includes(t)).length*3+(/\/wikipedia\/en\//.test(f.i.url||'')?2:0)-(/logo|icon|symbol|flag|map/.test(n)?4:0);};
   files.sort((a,b)=>sc(b)-sc(a));
   return files.length&&sc(files[0])>0?(files[0].i.thumburl||files[0].i.url):null;
 }
