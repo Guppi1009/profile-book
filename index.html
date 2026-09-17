@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>プロフィール帳</title>
+<meta name="description" content="人物やキャラクターの名前を検索すると、画像と「名前・出身・年齢・好きなもの・嫌いなもの」を1画面に表示します。Wikipediaの情報だけを使う無料のミニアプリ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f1e7; --paper:#fffdf8; --ink:#2b2a28; --muted:#7a746a; --line:#e6ddcc;
+  --accent:#e8846b; --accent-ink:#fff; --chip:#efe7d6; --chip-ink:#4a4437;
+  --label:#3f7d8a; --label-ink:#fff; --frame:#f2e9d8; --shadow:0 10px 30px rgba(80,60,20,.10);
+  --link:#2f6f9e;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1b19; --paper:#26241f; --ink:#f1ece2; --muted:#a39c8f; --line:#3a362e;
+    --accent:#e8846b; --chip:#37332a; --chip-ink:#e6dfd2; --label:#4d95a4; --frame:#302c24;
+    --shadow:0 10px 30px rgba(0,0,0,.35); --link:#7fb6e0;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1b19; --paper:#26241f; --ink:#f1ece2; --muted:#a39c8f; --line:#3a362e;
+  --accent:#e8846b; --chip:#37332a; --chip-ink:#e6dfd2; --label:#4d95a4; --frame:#302c24;
+  --shadow:0 10px 30px rgba(0,0,0,.35); --link:#7fb6e0;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif;
+  font-weight:500;line-height:1.4;
+}
+#app{height:100dvh;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding:12px 16px 14px;max-width:1280px;margin:0 auto}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:clamp(18px,2.6vh,24px);margin:0;letter-spacing:.06em;white-space:nowrap;display:flex;align-items:center;gap:8px}
+h1 .mark{display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--accent);color:#fff;font-size:.8em}
+form{display:flex;gap:8px;flex:1;min-width:240px}
+input[type=search]{
+  flex:1;min-width:0;font:inherit;font-size:clamp(15px,2.2vh,18px);padding:10px 14px;border-radius:999px;border:2px solid var(--line);
+  background:var(--paper);color:var(--ink);outline:none;
+}
+input[type=search]:focus{border-color:var(--accent)}
+button.go{font:inherit;font-weight:700;font-size:clamp(14px,2vh,16px);padding:10px 20px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);cursor:pointer;white-space:nowrap}
+button.go:active{transform:translateY(1px)}
+#chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;min-height:0;scrollbar-width:none;align-items:center}
+#chips::-webkit-scrollbar{display:none}
+#chips:empty{display:none}
+.chip{flex:0 0 auto;font:inherit;font-size:clamp(12px,1.7vh,14px);padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--chip);color:var(--chip-ink);cursor:pointer;max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.on{background:var(--label);color:var(--label-ink);border-color:var(--label)}
+.chip .d{opacity:.7;font-size:.86em}
+main.card{
+  min-height:0;display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:0;
+  background:var(--paper);border-radius:22px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;position:relative;
+}
+.photo{
+  position:relative;min-height:0;background:var(--frame);display:grid;place-items:center;overflow:hidden;
+  border-right:1px solid var(--line);
+}
+.photo img{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .25s}
+.photo img.show{opacity:1}
+.photo .empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:10px;padding:20px;color:var(--muted);font-size:clamp(13px,1.9vh,16px)}
+.photo .empty .big{font-size:clamp(40px,8vh,72px);line-height:1}
+.photo .empty a,.photo .empty button{font:inherit;font-size:inherit;color:var(--link);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+.photo.drag{outline:4px dashed var(--accent);outline-offset:-8px}
+.photo .cap{position:absolute;left:0;right:0;bottom:0;padding:4px 10px;font-size:clamp(10px,1.4vh,12px);color:var(--muted);background:color-mix(in srgb,var(--paper) 78%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:space-between;gap:8px}
+.photo .cap:empty{display:none}
+.photo .cap a{color:var(--link);text-decoration:none}
+.info{min-height:0;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));padding:clamp(8px,1.6vh,18px) clamp(14px,2.4vw,28px)}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:clamp(10px,1.6vw,18px);border-bottom:1px dashed var(--line);min-height:0;padding:2px 0}
+.row:last-child{border-bottom:0}
+.row .k{
+  width:clamp(74px,8.5vw,110px);text-align:center;font-weight:700;font-size:clamp(12px,1.8vh,15px);letter-spacing:.08em;
+  background:var(--label);color:var(--label-ink);border-radius:999px;padding:4px 0;
+}
+.row .v{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.row .v .main{
+  font-weight:700;font-size:clamp(17px,3.2vh,30px);line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+}
+.row.name .v .main{font-size:clamp(20px,3.8vh,36px)}
+.row .v .sub{font-size:clamp(11px,1.6vh,14px);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .v .main.none{color:var(--muted);font-weight:500}
+.row .v .main.wait{color:var(--muted);font-weight:500;font-size:clamp(14px,2.2vh,18px)}
+.row .v .main.wait::after{content:"…";animation:dots 1s steps(3,end) infinite}
+@keyframes dots{0%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
+#status{position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--label));transform:scaleX(0);transform-origin:left;transition:transform .3s;opacity:0}
+#status.on{opacity:1;animation:bar 1.6s ease-in-out infinite}
+@keyframes bar{0%{transform:scaleX(0)}70%{transform:scaleX(.85)}100%{transform:scaleX(.85)}}
+#msg{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:clamp(12px,1.8vh,14px);opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+#msg.on{opacity:.92}
+@media (max-width:700px){
+  #app{padding:10px 12px 12px}
+  main.card{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,40%) minmax(0,60%)}
+  .photo{border-right:0;border-bottom:1px solid var(--line)}
+  .info{padding:6px 12px}
+  .row .k{width:70px;font-size:12px}
+  .row .v .main{font-size:clamp(15px,2.6vh,22px)}
+  .row.name .v .main{font-size:clamp(17px,3vh,26px)}
+  .chip{max-width:60vw}
+}
+@media (max-height:520px){
+  .row .v .sub{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1><span class="mark">帳</span>プロフィール帳</h1>
+    <form id="f" autocomplete="off">
+      <input id="q" type="search" placeholder="人物やキャラクターの名前（例：大谷翔平・ドラえもん）" enterkeyhint="search" aria-label="名前を検索">
+      <button class="go" type="submit">しらべる</button>
+    </form>
+  </header>
+  <div id="chips" aria-label="ほかの候補"></div>
+  <main class="card">
+    <div id="status"></div>
+    <section class="photo" id="photo" aria-label="画像">
+      <img id="img" alt="">
+      <div class="empty" id="empty">
+        <div class="big">🔍</div>
+        <div>名前を入れて「しらべる」を押してね</div>
+      </div>
+      <div class="cap" id="cap"></div>
+    </section>
+    <section class="info" id="info">
+      <div class="row name"><div class="k">名前</div><div class="v"><div class="main" id="v-name"></div><div class="sub" id="s-name"></div></div></div>
+      <div class="row"><div class="k">出身</div><div class="v"><div class="main" id="v-origin"></div><div class="sub" id="s-origin"></div></div></div>
+      <div class="row"><div class="k">年齢</div><div class="v"><div class="main" id="v-age"></div><div class="sub" id="s-age"></div></div></div>
+      <div class="row"><div class="k">好きなもの</div><div class="v"><div class="main" id="v-like"></div><div class="sub" id="s-like"></div></div></div>
+      <div class="row"><div class="k">嫌いなもの</div><div class="v"><div class="main" id="v-dislike"></div><div class="sub" id="s-dislike"></div></div></div>
+    </section>
+    <div id="msg"></div>
+  </main>
+</div>
+<script>
+'use strict';
+/* =====================================================================
+   任意設定：Google画像検索の1枚目を使いたいときだけ入れる（無料枠 100回/日）。
+   空のままなら Wikipedia の画像だけで動く（キー不要・完全無料）。
+   ===================================================================== */
+const GOOGLE_API_KEY = '';
+const GOOGLE_CSE_ID  = '';
+
+const $ = id => document.getElementById(id);
+const els = {
+  q:$('q'), chips:$('chips'), img:$('img'), empty:$('empty'), cap:$('cap'), photo:$('photo'), status:$('status'), msg:$('msg'),
+  v:{name:$('v-name'),origin:$('v-origin'),age:$('v-age'),like:$('v-like'),dislike:$('v-dislike')},
+  s:{name:$('s-name'),origin:$('s-origin'),age:$('s-age'),like:$('s-like'),dislike:$('s-dislike')},
+};
+const JA='https://ja.wikipedia.org/w/api.php', EN='https://en.wikipedia.org/w/api.php', WD='https://www.wikidata.org/w/api.php';
+const PERSONA=/人物|キャラクター|character|主人公|架空|ロボット|ポケモン|Pokémon|選手|俳優|女優|歌手|声優|タレント|芸人|漫画家|作家|政治家|武将|大名|天皇|皇帝|国王|女王|将軍|学者|画家|音楽家|作曲家|発明家|実業家|YouTuber|アイドル|ヒーロー|妖怪|マスコット|ゆるキャラ|ライター|プロデューサー|監督|棋士|力士|レスラー|お笑い/i;
+const WORK=/漫画|アニメ|作品|映画|シリーズ|番組|ゲーム|小説|ドラマ|楽曲|アルバム|会社|企業|駅|市|町|村|コムーネ|川|山|島|地名|通貨|医薬品|料理|植物|食品|姓|名前|苗字|事件|一覧|団体|バンド|グループ/;
+const ORG=/事務所|会社|企業|団体|プロダクション|レーベル|チーム|ユニット|バンド|グループ|一覧|コンビ|トリオ|劇団|学校|大学|組織|機関|協会|連盟|財団|部隊|軍|世代|症候群|賞$|の(走法|技|用語|道具|地名|舞台|アイテム|設定|エピソード|楽曲|主題歌|歌|映画|作品|世界|集団|種族|乗り物|武器|能力|グッズ|ゲーム|声優|作者|原作者|作画|スタッフ|一覧|関連|用語集)/;
+const isPersona=d=>PERSONA.test(d||'')&&!ORG.test(d||'');
+const isWork=d=>WORK.test(d||'')&&!PERSONA.test(d||'');
+
+let cache=new Map(), seq=0;
+
+function norm(s){return (s||'').normalize('NFKC').replace(/[\s・･]/g,'').toLowerCase();}
+function show(msg,ms=2600){els.msg.textContent=msg;els.msg.classList.add('on');clearTimeout(show.t);show.t=setTimeout(()=>els.msg.classList.remove('on'),ms);}
+function busy(on){els.status.classList.toggle('on',!!on);}
+
+async function getJSON(base,params,tries=3){
+  const u=base+'?'+new URLSearchParams(Object.assign({format:'json',formatversion:'2',origin:'*'},params));
+  if(cache.has(u)) return cache.get(u);
+  let lastErr;
+  for(let i=0;i<tries;i++){
+    try{
+      const r=await fetch(u);
+      if(r.status===429||r.status>=500){lastErr=new Error('HTTP '+r.status);await new Promise(res=>setTimeout(res,700*(i+1)));continue;}
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j=await r.json(); cache.set(u,j); return j;
+    }catch(e){lastErr=e;await new Promise(res=>setTimeout(res,500*(i+1)));}
+  }
+  throw lastErr;
+}
+
+/* ---------- 1. 名前 → 記事の特定 ---------- */
+function cleanTitle(t){return (t||'').replace(/\s*[（(][^（）()]*[）)]\s*$/,'');}
+const PAGEPROPS={prop:'description|pageprops|pageviews',ppprop:'disambiguation|wikibase_item',pvipdays:30};
+const CREATIVE=/漫画|アニメ|作品|映画|シリーズ|番組|ゲーム|小説|ドラマ|絵本|特撮|戯曲/;
+function views(x){const v=x.pageviews||{};let s=0;for(const k in v)s+=(v[k]||0);return s;}
+
+async function resolve(query,opt={}){
+  const q=query.trim(); const nq=norm(q);
+  const cands=[]; let primary=null; const seen=new Set();
+  const push=c=>{const k=c.title||c.qid;if(!k||seen.has(k))return;seen.add(k);cands.push(c);};
+  // 候補の点数：名前の一致・説明文・人物らしさ・閲覧数（人気）
+  const KANA=/[ぁ-ゖァ-ヶー]/;
+  const boundary=s=>{ // 「ルフィーノ」の中の「ルフィ」のように、かなが続く途中一致は弱い
+    const i=s.indexOf(nq); if(i<0) return 0;
+    const before=s[i-1]||'', after=s[i+nq.length]||'';
+    const kanaQ=KANA.test(nq.slice(-1));
+    return ((after&&KANA.test(after)&&kanaQ)||(before&&KANA.test(before)&&KANA.test(nq[0])))?-1:0;
+  };
+  const scoreOf=x=>{const d=x.description||'',t=x.title||'',from=x.from||'';const nt=norm(cleanTitle(t)),nf=norm(cleanTitle(from));
+    const tm=(nt===nq||nf===nq)?4:(nt.includes(nq)||nf.includes(nq))?3:0;
+    const persona=isPersona(d), work=isWork(d);
+    const dm=norm(d).includes(nq)?(persona?3:2):0;
+    if(!tm&&!dm) return -99;                       // 名前と無関係なページは候補にしない
+    const tok=cleanTitle(from||t).split(/[・\s　]/).some(s=>norm(s)===nq)?1:0;
+    const bd=tm===3?Math.min(boundary(nt),nf?boundary(nf):0):0;
+    const viaSection=x.from&&!persona;              // 別名→作品や一覧ページへのリダイレクトは閲覧数を数えない
+    return tm+tok+bd+((nt.startsWith(nq)||nf.startsWith(nq))?1:0)+dm+(persona?2:0)+(/キャラクター|登場人物/.test(t)?1:0)-(work?1:0)-(!persona&&!work?1:0)+(viaSection?0:Math.log10(views(x)+1));};
+
+  if(opt.qid){ primary={qid:opt.qid,title:null,desc:opt.desc||'',label:opt.label||q}; }
+  else if(opt.title){
+    const A=await getJSON(JA,Object.assign({action:'query',titles:opt.title,redirects:1},PAGEPROPS));
+    const p=A.query.pages[0]; const rd=(A.query.redirects||[])[0];
+    if(!p.missing){
+      primary={title:p.title,qid:(p.pageprops||{}).wikibase_item,desc:p.description||'',label:cleanTitle(p.title)};
+      if(rd&&(rd.tofragment||!isPersona(p.description))&&norm(cleanTitle(p.title))!==norm(cleanTitle(opt.title))){primary.sectionOf=p.title;primary.label=cleanTitle(opt.title);}
+    }
+  }else{
+    const [A,W,S]=await Promise.all([
+      getJSON(JA,Object.assign({action:'query',titles:q,redirects:1,list:'prefixsearch',pssearch:q,pslimit:8},PAGEPROPS)),
+      getJSON(WD,{action:'wbsearchentities',search:q,language:'ja',uselang:'ja',limit:7,type:'item'}).catch(()=>({search:[]})),
+      getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:q,gsrlimit:6,gsrnamespace:0},PAGEPROPS)).catch(()=>null),
+    ]);
+    const p=A.query.pages[0];
+    const rd0=(A.query.redirects||[])[0]; const redirected=!!rd0;
+    const toSection=redirected&&!p.missing&&(!!rd0.tofragment||!isPersona(p.description));
+    const wdExact=(W.search||[]).filter(h=>norm((h.match||{}).text)===nq||norm(h.label)===nq);
+    const wdPersona=wdExact.filter(h=>isPersona(h.description));
+    const isDis=!p.missing&&p.pageprops&&('disambiguation' in p.pageprops);
+    const sameName=!p.missing&&norm(cleanTitle(p.title))===nq;
+    const fulltext=(S&&S.query&&S.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).sort((a,b)=>(a.index||0)-(b.index||0));
+
+    if(!p.missing&&!isDis&&(sameName||!toSection)&&isPersona(p.description)){
+      // 一番シンプルなケース：その名前の記事があって人物・キャラクター
+      primary={title:p.title,qid:(p.pageprops||{}).wikibase_item,desc:p.description||'',label:cleanTitle(p.title)};
+    }else if(!p.missing&&!isDis&&sameName&&CREATIVE.test(p.description||'')&&wdPersona.length){
+      // 記事が作品名で、同名のキャラクター項目が別にある（ドラえもん・アンパンマン）
+      const h=wdPersona[0]; push({title:p.title,desc:p.description||'',qid:(p.pageprops||{}).wikibase_item});
+      primary={qid:h.id,title:null,desc:h.description||'',label:h.label||q};
+    }else if(!p.missing&&!isDis&&toSection&&!sameName){
+      // 別の記事の一部へのリダイレクト（竈門炭治郎→鬼滅の刃、エレン→進撃の巨人の登場人物、ちいかわ→作品記事）
+      const h=wdPersona[0];
+      primary={title:p.title,qid:h?h.id:(p.pageprops||{}).wikibase_item,desc:h?h.description:(p.description||''),label:q,sectionOf:p.title};
+    }else{
+      // 迷うケース：候補を集めて点数で選ぶ（曖昧さ回避・部分一致・作品ページなど）
+      let pool=[];
+      const titles=new Set();
+      (A.query.prefixsearch||[]).forEach(x=>titles.add(x.title));
+      fulltext.forEach(x=>titles.add(x.title));
+      if(!p.missing&&!isDis) titles.add(p.title);
+      const jobs=[];
+      if(titles.size) jobs.push(getJSON(JA,Object.assign({action:'query',titles:[...titles].slice(0,40).join('|'),redirects:1},PAGEPROPS)).catch(()=>null));
+      if(isDis) jobs.push(getJSON(JA,Object.assign({action:'query',generator:'links',titles:p.title,gpllimit:100,gplnamespace:0,redirects:1},PAGEPROPS)).catch(()=>null));
+      const rs=await Promise.all(jobs);
+      for(const r of rs){ if(!r||!r.query) continue;
+        const rmap={}; (r.query.redirects||[]).forEach(x=>{ if(!rmap[x.to]||norm(x.from).includes(nq)) rmap[x.to]=x.from; });
+        (r.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).forEach(x=>{x.from=rmap[x.title]||'';pool.push(x);});
+      }
+      const byTitle={}; pool.forEach(x=>{ if(!byTitle[x.title]||(x.from&&!byTitle[x.title].from)) byTitle[x.title]=x; });
+      pool=Object.values(byTitle).map(x=>Object.assign(x,{score:scoreOf(x)})).filter(x=>x.score>=3.5).sort((a,b)=>b.score-a.score);
+      const top=pool[0];
+      const wdTop=wdPersona[0];
+      const wdScore=wdTop?6:0; // 完全一致＋人物（閲覧数は不明）
+      if(top&&top.score>=wdScore){
+        const via=top.from&&!isPersona(top.description)&&norm(cleanTitle(top.title))!==norm(cleanTitle(top.from))?top.from:'';
+        primary={title:top.title,qid:(top.pageprops||{}).wikibase_item,desc:top.description||'',label:cleanTitle(via||top.title)};
+        if(via){primary.sectionOf=top.title;}
+      }else if(wdTop){ primary={qid:wdTop.id,title:null,desc:wdTop.description||'',label:wdTop.label||q}; }
+      pool.slice(0,8).forEach(x=>push({title:x.title,desc:x.description||'',qid:(x.pageprops||{}).wikibase_item,from:x.from}));
+    }
+    if(!primary&&wdExact.length){const h=wdExact[0];primary={qid:h.id,title:null,desc:h.description||'',label:h.label||q};}
+    if(!primary&&fulltext.length){const x=fulltext[0];primary={title:x.title,qid:(x.pageprops||{}).wikibase_item,desc:x.description||'',label:cleanTitle(x.title)};}
+    wdPersona.forEach(h=>push({qid:h.id,title:null,label:h.label,desc:h.description||''}));
+    fulltext.filter(x=>scoreOf(x)>=3).forEach(x=>push({title:x.title,desc:x.description||'',qid:(x.pageprops||{}).wikibase_item}));
+    (A.query.prefixsearch||[]).forEach(x=>push({title:x.title}));
+  }
+  const out=cands.filter(c=>!primary||((c.title&&c.title!==primary.title&&c.title!==primary.sectionOf)||(!c.title&&c.qid&&c.qid!==primary.qid))).slice(0,6);
+  return {primary,cands:out};
+}
+
+/* ---------- 2. Wikidata ---------- */
+function claimVals(e,p){return ((e.claims||{})[p]||[]).map(c=>c.mainsnak&&c.mainsnak.datavalue&&c.mainsnak.datavalue.value).filter(Boolean);}
+function parseWDTime(t){
+  const m=/^([+-])(\d+)-(\d\d)-(\d\d)/.exec(t.time); if(!m) return null;
+  const y=(m[1]==='-'?-1:1)*parseInt(m[2],10), mo=parseInt(m[3],10)||1, d=parseInt(m[4],10)||1;
+  return {y,mo,d,prec:t.precision};
+}
+function fmtDate(x){if(!x)return '';const era=x.y<0?'紀元前':'';const y=Math.abs(x.y)+'年';if(x.prec<=9)return era+y;if(x.prec===10)return era+y+x.mo+'月';return era+y+x.mo+'月'+x.d+'日';}
+function ageBetween(a,b){let age=b.y-a.y;if(b.mo<a.mo||(b.mo===a.mo&&b.d<a.d))age--;return age;}
+
+/* ---------- 3. 本文からの抜き出し ---------- */
+function sections(text){
+  const out=[];let cur={h:'',lvl:0,body:''};
+  for(const line of text.split('\n')){
+    const m=/^(=+)\s*(.+?)\s*=+$/.exec(line);
+    if(m){out.push(cur);cur={h:m[2],lvl:m[1].length,body:''};}else cur.body+=line+'\n';
+  }
+  out.push(cur);return out;
+}
+function characterSection(text,name){
+  const secs=sections(text); const n=norm(name);
+  if(!n) return null;
+  let i=secs.findIndex(s=>norm(s.h)===n);
+  if(i<0) i=secs.findIndex(s=>norm(s.h).includes(n));
+  if(i<0){ // 「うずまき ナルト」「モンキー・D・ルフィ」など表記ゆれ：名前の後半・前半でも探す
+    const parts=name.split(/[・\s]/).filter(x=>x.length>=2);
+    if(parts.length>1) i=secs.findIndex(s=>parts.every(pt=>norm(s.h).includes(norm(pt))));
+  }
+  if(i<0) return null;
+  let body=secs[i].body; const lvl=secs[i].lvl;
+  for(let j=i+1;j<secs.length&&secs[j].lvl>lvl;j++) body+='\n=== '+secs[j].h+' ===\n'+secs[j].body;
+  return body;
+}
+const JUNK=/^(以前|当初|一方|ため|こと|これ|それ|あれ|もの|自分|自身|本人|相手|彼|彼女|多く|ある|いる|なる|する|した|特に|主に|他|その他|何|誰|人|全て|すべて|全員|皆|みんな|一部|大半|ほとんど|時|頃|後|前|中|上|下|方|際|場合|点|面|事|物|者|形|例|際に|時に|なにより|何より|誰より|一番|最も|もっとも|いう|という|同様|同じ|これら|それら|以上|以下|以外)$/;
+function tidy(s){
+  s=(s||'').normalize('NFKC').replace(/[（(][^）)]*[）)]/g,'').replace(/[「」『』"'“”]/g,'')
+    .replace(/^[はもがを、。：:\s]+/,'')
+    .replace(/^(しかし|ただし|なお|また|そして|だが|でも|一方で|一方|ちなみに|後述の|後述する|前述の|上述の|上記の|下記の|例の|同じく|いわゆる|やはり|むしろ)/,'')
+    .replace(/^(特に|主に|基本的に|とにかく|かなりの|大の|無類の|非常に|とても|大変|意外にも|意外と|実は|なお|また|さらに|そして|大変な|昔から|子供の頃から|幼い頃から|少年時代から)/,'')
+    .replace(/^.*?(として|とりわけ|から|では|には|でも|とは|なかでも|中でも)(?=.)/,'')
+    .replace(/(と記載|と書か|と語|と述べ|と言|とされ|と称|と呼ば|と発言|とコメント|と答え|と話し|と明か|とのこと|と回答|と公言|と述|と評).*$/,'')
+    .replace(/[（(][^）)]*$/,'')
+    .replace(/^の(?=すごい|ものすごい|ある|ない|ような|ように|ほう)/,'').replace(/^(嘗て|かつて|只|唯|すごい|ものすごい)/,'')
+    .replace(/(であること|であるため|であり|である|であった|だった|とされる|とされている|とされ|という|といった|など|等|も|は|より|ほど|だけ|のみ)$/,'')
+    .replace(/[、。\s]+$/,'').trim();
+  return s;
+}
+function okItem(v){
+  if(!v||v.length<1||v.length>16) return false;
+  if(JUNK.test(v)) return false;
+  if(/(ません|ます|です|のに|けど|だが|から$|ので$|ため|間違|思っ|言っ|語っ|述べ|答え|話し|受け|反撃|攻撃|によれ|によると|として$|より|の頃|時代|方法|場合|らしい|関わ|等身大|だけ|以外|のみ|嫌いなもの|好きなもの|苦手なもの)/.test(v)) return false;
+  if(/^(いう|という|この|その|あの|どの|ある|いる|同じ|同様)/.test(v)) return false;
+  if(/^[A-Za-z0-9]{2,6}$/.test(v)) return false;
+  if(/[ぁ-ん]{2,}[一-龥]+[ぁ-ん]{2,}/.test(v)&&!/(の|な)[一-龥]/.test(v)) return false;
+  if(/(する|した|している|される|れる|える|ある|いる|なる|った|きた|ない|たい|しい|う|く|べき|ため|こと|の|に|へ|と|で|が|を|は|も)$/.test(v)&&!/(こと|もの)$/.test(v)) return false;
+  if(/[a-zA-Z0-9]{8,}/.test(v)) return false;
+  return true;
+}
+function cutParticle(v){ // 「寒さがあり」→「寒さ」「この世界に住んでいる人」→「この世界」
+  const m=/^(.{1,16}?)(?:が|を|は|に)(?=.)/.exec(v);
+  return m&&m[1].length>=1?m[1]:v;
+}
+function splitItems(s){
+  let parts=tidy(s).split(/[、,／/]|・(?=.{2,})/);
+  parts=parts.flatMap(x=>x.split(/や(?=.{2,})/).length===2&&x.split(/や(?=.{2,})/).every(y=>y.length>=2)?x.split(/や(?=.{2,})/):[x]);
+  return parts.map(x=>tidy(cutParticle(tidy(x)))).filter(okItem);
+}
+function pick(text,patterns,max){
+  const found=[];
+  for(const re of patterns){
+    const g=new RegExp(re.source,'g');let m;
+    while((m=g.exec(text))&&found.length<max){
+      for(const v of splitItems(m[1])){ if(!found.includes(v)&&found.length<max) found.push(v); }
+    }
+    if(found.length) return found;
+  }
+  return found;
+}
+const NOUN='[^、。\\n（）()「」『』がをはもへ]{1,18}?';
+const LIKE_HEAD=/好|趣味|嗜好|好物/, DIS_HEAD=/苦手|嫌|弱点/;
+const PERSONA_HEAD=/人物|性格|人柄|プロフィール|設定|特徴|概要|概説|来歴|生涯|エピソード|逸話|嗜好|私生活|家族|人間関係|能力|容姿|生い立ち/;
+const SKIP_HEAD=/作品|ゲーム|映画|アニメ|登場|関連|評価|反響|脚注|出典|参考|外部リンク|商品|グッズ|メディア|シリーズ|一覧|歴史|沿革|受賞|ディスコグラフィ|出演|著書|舞台|楽曲|放送|スタッフ|声優|キャスト|用語|世界観|派生|展開|批評|論争|訴訟|論文|書誌|研究|影響|年表|略歴/;
+function tiers(text,head){
+  const secs=sections(text);
+  const t1=secs.filter(s=>head.test(s.h)).map(s=>s.body).join('\n');
+  const t2=secs.filter(s=>!head.test(s.h)&&(s.lvl===0||PERSONA_HEAD.test(s.h))&&!SKIP_HEAD.test(s.h)).map(s=>s.body).join('\n');
+  const t3=secs.filter(s=>!SKIP_HEAD.test(s.h)).map(s=>s.body).join('\n').slice(0,20000);
+  return [t1,t2,t3];
+}
+function extractLikes(text){
+  const pats=[
+    /(?:大?好物|好きな(?:もの|物|食べ物|食べもの|こと|事|人|動物|言葉|教科|科目|食べ物や飲み物))(?:は|：|:|が|も|として|には)((?:(?!嫌い|苦手|弱点)[^。\n]){1,50})/,
+    /趣味(?:は|：|:|が|も|として)((?:(?!嫌い|苦手)[^。\n]){1,50})/,
+    new RegExp('('+NOUN+')(?:が|を|は|も)(?:なにより|何より|一番|とても|大変|非常に|かなり|とにかく|本当に|結構|割と|特に|大の)?(?:も)?(?:大好き|大好物|好き|好物|お気に入り|好んで|好み|好む)'),
+  ];
+  let r=[];
+  for(const t of tiers(text,LIKE_HEAD)){ if(t){r=pick(t,pats,4);if(r.length)break;} }
+  return r.join('・').slice(0,30);
+}
+function extractDislikes(text){
+  const pats=[
+    /(?:嫌いな(?:もの|物|食べ物|食べもの|こと|事|人|言葉)|苦手な(?:もの|物|食べ物|食べもの|こと|事|人|教科|科目)|弱点)(?:は|：|:|が|も|として|には)((?:(?!好き|好物|趣味)[^。\n]){1,50})/,
+    new RegExp('('+NOUN+')(?:が|を|は|も)(?:なにより|何より|一番|とても|大変|非常に|かなり|とにかく|本当に|結構|割と|特に|大の)?(?:も)?(?:大の苦手|大嫌い|苦手|嫌い|嫌っている|嫌う|恐れている|怖がる|怖い)'),
+  ];
+  let r=[];
+  for(const t of tiers(text,DIS_HEAD)){ if(t){r=pick(t,pats,4);if(r.length)break;} }
+  return r.join('・').slice(0,30);
+}
+function extractReading(intro,title){
+  const t=norm(cleanTitle(title));
+  const head=intro.slice(0,200).replace(/\s/g,'');
+  const m=/^[^（(\n]{1,40}?[（(]([ぁ-ゖァ-ヶー・]{2,40})[、）)]/.exec(head)||/[（(]([ぁ-ゖー・]{2,40})[）)]/.exec(head);
+  if(!m) return '';
+  const r=m[1];
+  return r&&norm(r)!==t?r:'';
+}
+const PLACE=/(県|市|区|町|村|都|道|府|国|島|州|地方|里|城|星|王国|帝国|街|大陸|世界|地区|郡|省|藩|京|浦|港|谷|山|川|湖|海|荘|寮|校|寺|宮|殿|邸|舎|館|所)$/;
+function extractOrigin(text){
+  const head=text.slice(0,8000);
+  const g=/([^、。\n（）()「」『』がをはもへにで]{1,22})(?:の)?出身/g; let m,best=null,bs=-9;
+  while((m=g.exec(head))){
+    let v=tidy(m[1]).replace(/^の/,'').replace(/^(現在の|現|旧|同じ|同|生まれは)/,'');
+    if(!okItem(v)&&!PLACE.test(v)) continue;
+    if(/^(おける|における|の|同|他|ら|等|など)/.test(v)) continue;
+    let s=(PLACE.test(v)?3:0)+(v.length<=14?1:0)-(/(した|する|いる|ある|れる|った|ない)/.test(v)?5:0)-(g.lastIndex>2500?1:0);
+    if(s>bs){bs=s;best=v;}
+  }
+  if(best&&bs>=1) return best;
+  const m2=/(?:出身地|出生地|生誕地|生まれ|出生)(?:は|：|:)([^。\n、]{1,24})/.exec(head);
+  if(m2){const v=tidy(m2[1]);if(okItem(v)||PLACE.test(v))return v;}
+  return '';
+}
+function extractAge(text){
+  const head=text.slice(0,6000);
+  let m=/年齢(?:は|：|:|設定は|設定：|設定:)?\s*(?:約|およそ)?(\d{1,3})歳/.exec(head)
+      ||/(?:^|[、。\s])(\d{1,3})歳(?:の(?:少年|少女|男性|女性|男の子|女の子|子供|小学生|中学生|高校生|青年|男|女)|。|、|で|\s|$)/m.exec(head);
+  return m?m[1]+'歳':'';
+}
+function extractBirthday(text){
+  const m=/誕生日(?:は|：|:)\s*((?:\d{1,4}年)?\d{1,2}月\d{1,2}日)/.exec(text.slice(0,8000));
+  return m?m[1]:'';
+}
+
+/* ---------- 4. 画像 ---------- */
+async function wikiImage(base,title){
+  const r=await getJSON(base,{action:'query',titles:title,redirects:1,prop:'pageimages',piprop:'thumbnail',pithumbsize:900,pilicense:'any'}).catch(()=>null);
+  const p=r&&r.query&&r.query.pages&&r.query.pages[0];
+  if(p&&p.thumbnail) return p.thumbnail.source;
+  if(base!==EN||!p||p.missing) return null;
+  // 小さすぎて代表画像に選ばれない画像（キャラの公式絵など）を記事内のファイル一覧から探す
+  const r2=await getJSON(EN,{action:'query',titles:p.title,generator:'images',gimlimit:20,prop:'imageinfo',iiprop:'url|mime|size',iiurlwidth:900}).catch(()=>null);
+  const files=(r2&&r2.query&&r2.query.pages||[]).map(f=>({t:f.title,i:(f.imageinfo||[])[0]||{}})).filter(f=>/image\/(jpeg|png|webp)/.test(f.i.mime||'')&&(f.i.width||0)>=80);
+  const toks=p.title.toLowerCase().split(/[^a-z0-9]+/).filter(t=>t.length>=3);
+  const sc=f=>{const n=f.t.toLowerCase();return (toks.some(t=>n.includes(t))?3:0)+(/\/wikipedia\/en\//.test(f.i.url||'')?2:0)-(/logo|icon|symbol|flag|map/.test(n)?4:0);};
+  files.sort((a,b)=>sc(b)-sc(a));
+  return files.length&&sc(files[0])>0?(files[0].i.thumburl||files[0].i.url):null;
+}
+async function googleImage(q){
+  if(!GOOGLE_API_KEY||!GOOGLE_CSE_ID) return null;
+  try{
+    const u='https://www.googleapis.com/customsearch/v1?'+new URLSearchParams({key:GOOGLE_API_KEY,cx:GOOGLE_CSE_ID,q,searchType:'image',num:'3',safe:'active',hl:'ja',imgSize:'large'});
+    const r=await fetch(u); if(!r.ok) return null; const j=await r.json();
+    const it=(j.items||[]).find(x=>/^https?:/.test(x.link)); return it?{src:it.link,from:'Google画像'}:null;
+  }catch(e){return null;}
+}
+function loadImg(src){return new Promise(res=>{const im=new Image();im.onload=()=>res(true);im.onerror=()=>res(false);im.referrerPolicy='no-referrer';im.src=src;});}
+
+/* ---------- 5. 描画 ---------- */
+function setField(k,main,sub,cls){
+  els.v[k].textContent=main||'ー';els.v[k].className='main'+(main?'':' none')+(cls?' '+cls:'');els.v[k].title=main||'';
+  els.s[k].textContent=sub||'';els.s[k].title=sub||'';
+}
+function waiting(k){els.v[k].textContent='しらべ中';els.v[k].className='main wait';els.s[k].textContent='';}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function setImage(src,from,link){
+  els.img.classList.remove('show');
+  if(!src){els.img.removeAttribute('src');els.empty.style.display='';els.cap.innerHTML='';return;}
+  els.img.src=src;els.img.onload=()=>{els.img.classList.add('show');els.empty.style.display='none';};
+  els.img.onerror=()=>{noImage(link);};
+  els.cap.innerHTML='<span>画像：'+esc(from)+'</span>'+(link?'<a href="'+esc(link)+'" target="_blank" rel="noopener">記事を見る ↗</a>':'');
+}
+function noImage(link,name){
+  els.img.removeAttribute('src');els.img.classList.remove('show');els.empty.style.display='';
+  const g='https://www.google.com/search?tbm=isch&safe=active&q='+encodeURIComponent(name||els.q.value);
+  els.empty.innerHTML='<div class="big">🖼️</div><div>Wikipediaに画像がありませんでした</div><div><a href="'+g+'" target="_blank" rel="noopener">Google画像で探す ↗</a><br>見つけた画像をここにドラッグ＆ドロップ（または貼り付け）するとここに入るよ</div>';
+  els.cap.innerHTML=link?'<span></span><a href="'+esc(link)+'" target="_blank" rel="noopener">記事を見る ↗</a>':'';
+}
+function renderChips(cands){
+  els.chips.innerHTML='';
+  const names=cands.map(c=>cleanTitle(c.title||c.label||''));
+  cands.forEach((c,i)=>{
+    const b=document.createElement('button');b.type='button';b.className='chip';
+    const full=c.title||c.label||''; const dup=names.filter(n=>n===names[i]).length>1;
+    const label=dup?full:names[i]; const d=c.desc?' <span class="d">'+esc(c.desc.slice(0,18))+'</span>':'';
+    b.innerHTML=esc(label)+d;b.title=full+(c.desc?' — '+c.desc:'');
+    b.onclick=()=>{els.q.value=names[i];run(names[i],{title:c.title||undefined,qid:c.title?undefined:c.qid,desc:c.desc,label:c.label});};
+    els.chips.appendChild(b);
+  });
+}
+
+/* ---------- 6. メイン ---------- */
+const EXTRACT={action:'query',redirects:1,prop:'extracts|pageimages|description|langlinks',explaintext:1,exlimit:1,piprop:'thumbnail',pithumbsize:900,pilicense:'any',lllang:'en'};
+async function run(query,opt={}){
+  const my=++seq; const q=query.trim(); if(!q) return;
+  busy(true);
+  ['name','origin','age','like','dislike'].forEach(waiting);
+  els.v.name.textContent=cleanTitle(q);els.v.name.className='main';
+  setImage(null);els.empty.innerHTML='<div class="big">🔍</div><div>しらべています…</div>';
+  try{
+    const {primary,cands}=await resolve(q,opt);
+    if(my!==seq) return;
+    renderChips(cands);
+    if(!primary) throw new Error('notfound');
+
+    const jobs={};
+    if(primary.qid) jobs.wd=getJSON(WD,{action:'wbgetentities',ids:primary.qid,props:'claims|sitelinks|labels|descriptions',languages:'ja|en',sitefilter:'jawiki|enwiki'}).catch(()=>null);
+    if(primary.title) jobs.ja=getJSON(JA,Object.assign({titles:primary.title},EXTRACT)).catch(()=>null);
+    let [wd,ja]=await Promise.all([jobs.wd,jobs.ja]);
+    if(my!==seq) return;
+    const ent=wd&&wd.entities&&wd.entities[primary.qid]&&!wd.entities[primary.qid].missing?wd.entities[primary.qid]:null;
+    let title=primary.title, page=ja&&ja.query&&ja.query.pages&&ja.query.pages[0];
+    let sectionOf=primary.sectionOf||null;
+    if(!title&&ent){
+      title=(ent.sitelinks&&ent.sitelinks.jawiki&&ent.sitelinks.jawiki.title)||null;
+      if(title){ja=await getJSON(JA,Object.assign({titles:title},EXTRACT)).catch(()=>null);page=ja&&ja.query&&ja.query.pages&&ja.query.pages[0];
+        if(page&&norm(cleanTitle(page.title))!==norm(cleanTitle(title))) sectionOf=page.title; }
+    }
+    if(my!==seq) return;
+    if(page&&page.missing) page=null;
+    const label=(ent&&ent.labels&&(ent.labels.ja||ent.labels.en)||{}).value;
+    const dispName=cleanTitle(sectionOf?(primary.label||label||q):(title||label||primary.label||q));
+    const enTitle=(ent&&ent.sitelinks&&ent.sitelinks.enwiki&&ent.sitelinks.enwiki.title)||(page&&page.langlinks&&page.langlinks[0]&&page.langlinks[0].title)||null;
+    let text=(page&&page.extract)||'';
+    let charOnly=null;
+    if(sectionOf&&text){ charOnly=characterSection(text,dispName); }
+    // 自分の記事が無いキャラは「登場人物」一覧ページから該当の節を探す
+    if(!text||(sectionOf&&!charOnly)){
+      const S=await getJSON(JA,{action:'query',list:'search',srsearch:'"'+dispName+'"',srlimit:6}).catch(()=>null);
+      const hits=(S&&S.query&&S.query.search)||[];
+      const hit=hits.find(h=>/登場人物|キャラクター|一覧/.test(h.title))||hits[0];
+      if(hit&&hit.title!==(page&&page.title)){
+        const R=await getJSON(JA,{action:'query',titles:hit.title,prop:'extracts',explaintext:1,exlimit:1}).catch(()=>null);
+        const full=(R&&R.query.pages[0].extract)||'';
+        const sec=characterSection(full,dispName);
+        if(sec){charOnly=sec;text=full;sectionOf=hit.title;if(!title)title=hit.title;}
+      }
+    }
+    if(my!==seq) return;
+    const body=charOnly||text;
+    const link=title?'https://ja.wikipedia.org/wiki/'+encodeURIComponent(sectionOf||title)+(sectionOf?'#'+encodeURIComponent(dispName):''):(enTitle?'https://en.wikipedia.org/wiki/'+encodeURIComponent(enTitle):'');
+    const desc=(ent&&ent.descriptions&&ent.descriptions.ja&&ent.descriptions.ja.value)||(!sectionOf&&page&&page.description)||primary.desc||'';
+    const intro=(sectionOf?body:text).split(/\n==/)[0];
+    setField('name',dispName,[sectionOf?'':extractReading(intro,dispName),desc].filter(Boolean).join('　'));
+
+    // 画像（設定時Google → 自分の記事の画像 → 英語版 → Wikidata → 手動）
+    (async()=>{
+      const manual=getManual(dispName); if(manual){setImage(manual,'自分で追加した画像',link);return;}
+      let src=null,from='';
+      const human=ent&&claimVals(ent,'P31').some(v=>v.id==='Q5');
+      const p18=ent&&claimVals(ent,'P18')[0];
+      const fromP18=()=>{if(p18){src='https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(p18)+'?width=900';from='Wikimedia Commons';}};
+      const fromJa=()=>{if(page&&page.thumbnail&&!sectionOf){src=page.thumbnail.source;from='Wikipedia';}};
+      const fromEn=async()=>{if(enTitle){src=await wikiImage(EN,enTitle);if(src)from='Wikipedia（英語版）';}};
+      const g=await googleImage(dispName); if(g){src=g.src;from=g.from;}
+      if(human){ // 実在の人物：Wikidataの肖像 → 日本語版 → 英語版
+        if(!src) fromP18(); if(!src) fromJa(); if(!src) await fromEn();
+      }else{     // キャラクター：英語版（公式絵が多い）→ 日本語版 → Wikidata
+        if(!src) await fromEn(); if(!src) fromJa(); if(!src) fromP18();
+      }
+      if(!src&&page&&page.thumbnail){src=page.thumbnail.source;from='Wikipedia（'+cleanTitle(page.title)+'）';}
+      if(my!==seq) return;
+      if(src) setImage(src,from,link); else noImage(link,dispName);
+    })();
+
+    // 出身・年齢（Wikidata優先 → 本文）
+    const isHuman=ent&&claimVals(ent,'P31').some(v=>v.id==='Q5');
+    let originMain='',originSub='',ageMain='',ageSub='';
+    const p19=ent&&claimVals(ent,'P19')[0], p27=ent&&claimVals(ent,'P27')[0], p1441=ent?claimVals(ent,'P1441').slice(0,5):[], p1080=ent&&claimVals(ent,'P1080')[0];
+    const ids=[];[p19,p27,p1080,...p1441].forEach(v=>v&&v.id&&!ids.includes(v.id)&&ids.push(v.id));
+    let labels={};
+    if(ids.length){const L=await getJSON(WD,{action:'wbgetentities',ids:ids.join('|'),props:'labels',languages:'ja|en'}).catch(()=>null);if(L&&L.entities)for(const k in L.entities){const lb=L.entities[k].labels||{};labels[k]=(lb.ja||lb.en||{}).value||'';}}
+    if(my!==seq) return;
+    const textOrigin=extractOrigin(body);
+    const work=p1441.map(v=>labels[v.id]).filter(Boolean).sort((a,b)=>(text.includes(b)?1:0)-(text.includes(a)?1:0))[0];
+    if(p19&&labels[p19.id]){originMain=labels[p19.id];if(p27&&labels[p27.id]&&labels[p27.id]!==originMain)originSub=labels[p27.id];}
+    else if(textOrigin){originMain=textOrigin;if(p27&&labels[p27.id])originSub=labels[p27.id];}
+    else if(p27&&labels[p27.id]&&isHuman){originMain=labels[p27.id];}
+    else if(p1080&&labels[p1080.id]){originMain=labels[p1080.id];originSub='作品の世界';}
+    else if(work){originMain='『'+work+'』';originSub='登場する作品';}
+    else if(p27&&labels[p27.id]){originMain=labels[p27.id];}
+    setField('origin',originMain,originSub);
+
+    const b=ent&&claimVals(ent,'P569')[0], d=ent&&claimVals(ent,'P570')[0];
+    const bd=b&&parseWDTime(b), dd=d&&parseWDTime(d);
+    const now=new Date(), today={y:now.getFullYear(),mo:now.getMonth()+1,d:now.getDate()};
+    const ta=isHuman?'':extractAge(body), bday=isHuman?'':extractBirthday(body);
+    if(ta){ageMain=ta;ageSub=(bday?'誕生日：'+bday+'　':'')+'作中の設定';}
+    else if(bd&&dd&&ageBetween(bd,dd)>=0){ageMain=ageBetween(bd,dd)+'歳で死去';ageSub=fmtDate(bd)+' 〜 '+fmtDate(dd)+(isHuman?'':'（作中の設定）');}
+    else if(bd&&ageBetween(bd,today)>=0&&ageBetween(bd,today)<130&&(isHuman||bd.prec>=11)){const a=ageBetween(bd,today);ageMain=(bd.prec<=9?'約':'')+a+'歳';ageSub=fmtDate(bd)+'生まれ'+(isHuman?'':'（作中の設定）');}
+    else if(bd){ageSub=fmtDate(bd)+'生まれ（作中の設定）';}
+    else if(bday){ageSub='誕生日：'+bday;}
+    setField('age',ageMain,ageSub);
+
+    // 好き・嫌い（本文から）
+    const like=extractLikes(body), dis=extractDislikes(body);
+    const src=sectionOf?'Wikipedia「'+cleanTitle(sectionOf)+'」より':'Wikipediaの記事より';
+    setField('like',like,like?src:(body?'記事に書かれていません':'日本語の記事がありません'));
+    setField('dislike',dis,dis?src:(body?'記事に書かれていません':'日本語の記事がありません'));
+  }catch(e){
+    if(my!==seq) return;
+    ['origin','age','like','dislike'].forEach(k=>setField(k,'',''));
+    if(e&&e.message==='notfound'){setField('name',cleanTitle(q),'見つかりませんでした');noImage('',q);show('見つかりませんでした。別の言い方で試してみてね');}
+    else{setField('name',cleanTitle(q),'通信エラー');show('通信に失敗しました。もう一度試してみてね');console.error(e);}
+  }finally{ if(my===seq) busy(false); }
+}
+
+/* ---------- 7. 手動画像（ドラッグ＆ドロップ／貼り付け） ---------- */
+function mkey(n){return 'pb_img:'+n;}
+function getManual(n){try{return localStorage.getItem(mkey(n));}catch(e){return null;}}
+function setManual(n,v){try{if(v&&v.length<1500000)localStorage.setItem(mkey(n),v);}catch(e){}}
+function currentName(){return els.v.name.textContent.trim();}
+async function acceptImage(src){
+  if(!src) return; const n=currentName(); if(!n) return;
+  if(await loadImg(src)){setManual(n,src);setImage(src,'自分で追加した画像','');show('画像を入れました');}
+  else show('この画像は読み込めませんでした。別の画像を試してね');
+}
+function fileToData(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res(null);r.readAsDataURL(file);});}
+async function handleTransfer(dt){
+  if(!dt) return;
+  const f=[...(dt.files||[])].find(x=>/^image\//.test(x.type)); if(f){return acceptImage(await fileToData(f));}
+  const html=dt.getData&&dt.getData('text/html'); if(html){const m=/<img[^>]+src=["']([^"']+)["']/i.exec(html);if(m)return acceptImage(m[1].replace(/&amp;/g,'&'));}
+  const uri=dt.getData&&(dt.getData('text/uri-list')||dt.getData('text/plain')); if(uri&&/^https?:\/\//.test(uri.trim()))return acceptImage(uri.trim().split('\n')[0]);
+}
+['dragenter','dragover'].forEach(ev=>els.photo.addEventListener(ev,e=>{e.preventDefault();els.photo.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>els.photo.addEventListener(ev,e=>{e.preventDefault();els.photo.classList.remove('drag');}));
+els.photo.addEventListener('drop',e=>handleTransfer(e.dataTransfer));
+document.addEventListener('paste',e=>{if(document.activeElement===els.q)return;handleTransfer(e.clipboardData);});
+
+/* ---------- 8. 起動 ---------- */
+$('f').addEventListener('submit',e=>{e.preventDefault();run(els.q.value);});
+const init=new URLSearchParams(location.search).get('q')||decodeURIComponent(location.hash.slice(1));
+if(init){els.q.value=init;run(init);} else els.q.focus();
+</script>
+</body>
+</html>
