@@ -211,6 +211,10 @@ main.card::after{right:70px;transform:rotate(5deg);background:repeating-linear-g
    ===================================================================== */
 const GOOGLE_API_KEY = '';
 const GOOGLE_CSE_ID  = '';
+/* AI（Gemini）の設定：課金設定なしのプロジェクトで作った無料枠のキーを入れる。空なら Wikipedia の抜き出しだけで動く */
+/* キーは GitHub のシークレット検出で公開が止まるため base64 で置く（ブラウザ用キー。Google側で「guppi1009.github.io からのみ」に制限する） */
+const GEMINI_API_KEY = atob('QVEuQWI4Uk42THVUZHhpUVdCVmJkV0xfOTUtRTJ1ZGhMX2d0QVZZVGRxM3hMRUZMa243dHc=');
+const GEMINI_MODELS  = ['gemini-3.5-flash-lite','gemini-3.1-flash-lite','gemini-flash-lite-latest']; // 先頭から順に試す（無料枠・軽量）
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -660,6 +664,47 @@ async function googleImage(q){
 }
 function loadImg(src){return new Promise(res=>{const im=new Image();im.onload=()=>res(true);im.onerror=()=>res(false);im.referrerPolicy='no-referrer';im.src=src;});}
 
+/* ---------- 4b. AI（Gemini）で7項目を整える ---------- */
+let aiQuotaOut=false;
+function aiCacheGet(n){try{const c=JSON.parse(localStorage.getItem('pb_ai:'+n)||'null');if(c&&Date.now()-c.t<7*864e5)return c.v;}catch(e){}return null;}
+function aiCacheSet(n,v){try{localStorage.setItem('pb_ai:'+n,JSON.stringify({t:Date.now(),v}));}catch(e){}}
+async function aiProfile(name,desc,query,text,known){
+  if(!GEMINI_API_KEY||aiQuotaOut) return null;
+  const cached=aiCacheGet(name); if(cached) return cached;
+  const prompt=`あなたは中学生向け「プロフィール帳」の編集者です。次の人物・キャラクターについて7項目を日本語で短く埋めてください。
+対象：「${name}」${desc?'（'+desc+'）':''}
+検索した語：「${query}」
+参考までに機械抽出した値（間違いが混ざるので鵜呑みにしない）：${JSON.stringify(known)}
+参考（Wikipedia本文の一部）：
+${(text||'').slice(0,5000)}
+
+ルール：
+- 各項目は20文字以内。複数あるときは「・」で区切って最大3つ。文ではなく言葉で書く。
+- 参考本文に無い項目は、あなたが確かに知っていることで埋める。確かでなければ「不明」。作り話はしない。
+- origin（出身）：地名。キャラクターは作品の中の出身地、無ければ「『作品名』」。
+- age（年齢）：実在の人物は現在の年齢（故人は「◯歳で死去」）。キャラクターは作中の設定。
+- likes／dislikes：好きなもの／嫌いなもの。
+- can／cant：できること（特技・能力）／できないこと（苦手・不得意）。英語の can / can't の練習に使うので「泳ぐ」「料理」のように動詞や名詞で。
+- 対象が検索した語と別人・別キャラだと思うなら wrong_person を true にし、suggested に日本語版Wikipediaの正しい記事名を入れる。
+JSONだけを出力：{"origin":"","age":"","likes":"","dislikes":"","can":"","cant":"","wrong_person":false,"suggested":""}`;
+  const body=JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:900,responseMimeType:'application/json'}});
+  let r=null,last=0;
+  for(const model of GEMINI_MODELS){ // モデルが廃止・混雑のときは次のモデルへ
+    const url='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(GEMINI_API_KEY);
+    r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body}).catch(()=>null);
+    if(r&&r.ok) break; last=r?r.status:0; if(r&&r.status!==404&&r.status!==429&&r.status!==503) break;
+  }
+  if(!r||!r.ok){ if(last===429){aiQuotaOut=true;throw new Error('quota');} throw new Error('ai http '+last); }
+  const j=await r.json();
+  const txt=((j.candidates||[])[0]||{}).content?((j.candidates[0].content.parts||[]).map(p=>p.text||'').join('')):'';
+  let raw=txt.replace(/```(?:json)?/gi,'').trim(); const s0=raw.indexOf('{'); if(s0<0) throw new Error('ai parse');
+  raw=raw.slice(s0); const e0=raw.lastIndexOf('}'); raw=e0>=0?raw.slice(0,e0+1):(raw.replace(/,?\s*"[^"]*$/,'')+'"}');  // 途中で切れた場合の応急処置
+  let v; try{v=JSON.parse(raw);}catch(e){throw new Error('ai json');}
+  const clean=s=>{s=String(s||'').replace(/[「」『』"]/g,'').replace(/[。．]$/,'').replace(/^[・、,\s]+|[・、,\s]+$/g,'').trim();return /^(不明|なし|無し|-|ー|—|N\/A|unknown|特になし)$/i.test(s)?'':s.slice(0,28);};
+  const out={origin:clean(v.origin),age:clean(v.age),likes:clean(v.likes),dislikes:clean(v.dislikes),can:clean(v.can),cant:clean(v.cant),wrong_person:!!v.wrong_person,suggested:String(v.suggested||'').trim()};
+  aiCacheSet(name,out); return out;
+}
+
 /* ---------- 5. 描画 ---------- */
 const FIELD_Q={origin:'出身',age:'年齢',like:'好きなもの',dislike:'嫌いなもの',can:'得意なこと',cant:'苦手なこと'};
 function setField(k,main,sub,cls){
@@ -868,6 +913,31 @@ async function run(query,opt={}){
     setField('dislike',dis,dis?disSub:(body?'記事に書かれていません':'日本語の記事がありません'));
     setField('can',can,can?(canSub||'Wikidataの職業・能力より'):(body?'記事に書かれていません':'日本語の記事がありません'));
     setField('cant',cant,cant?cantSub:(body?'記事に書かれていません':'日本語の記事がありません'));
+
+    // AI（Gemini）で仕上げ：Wikipediaの値を先に見せておき、AIの結果が来たら差し替える
+    if(GEMINI_API_KEY&&!aiQuotaOut){
+      const known={name:dispName,origin:originMain,age:ageMain,likes:like,dislikes:dis,can,cant};
+      ['origin','age','like','dislike','can','cant'].forEach(k=>{els.s[k].textContent=(els.s[k].textContent||'')+'　✨AIが確認中…';});
+      try{
+        const ai=await aiProfile(dispName,desc,q,body||text,known);
+        if(my!==seq) return;
+        if(ai){
+          const AI='✨ AI（Gemini）がWikipediaと知識から整理';
+          if(ai.wrong_person&&ai.suggested&&norm(ai.suggested)!==norm(dispName)&&!opt._aiRetry){ show('「'+ai.suggested+'」のことかも。開き直します',3000); return run(ai.suggested,{title:ai.suggested,_aiRetry:true}); }
+          if(ai.origin) setField('origin',ai.origin,AI); else setField('origin',originMain,originSub);
+          if(ageMain) setField('age',ageMain,ageSub); else if(ai.age) setField('age',ai.age,AI); else setField('age','',ageSub);
+          setField('like',ai.likes||like,ai.likes?AI:likeSub);
+          setField('dislike',ai.dislikes||dis,ai.dislikes?AI:disSub);
+          setField('can',ai.can||can,ai.can?AI:(canSub||''));
+          setField('cant',ai.cant||cant,ai.cant?AI:cantSub);
+        }
+      }catch(e){
+        if(my!==seq) return;
+        ['origin','age','like','dislike','can','cant'].forEach(k=>{els.s[k].textContent=(els.s[k].textContent||'').replace('　✨AIが確認中…','');});
+        if(e&&e.message==='quota') show('AIの無料回数を使い切ったので、今日はWikipediaの情報だけで表示します',4000);
+        else console.warn('AI',e);
+      }
+    }
   }catch(e){
     if(my!==seq) return;
     ['origin','age','like','dislike','can','cant'].forEach(k=>setField(k,'',''));
