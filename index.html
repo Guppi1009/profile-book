@@ -239,7 +239,13 @@ async function getJSON(base,params,tries=3){
       const r=await fetch(u);
       if(r.status===429||r.status>=500){lastErr=new Error('HTTP '+r.status);await new Promise(res=>setTimeout(res,700*(i+1)));continue;}
       if(!r.ok) throw new Error('HTTP '+r.status);
-      const j=await r.json(); cache.set(u,j); return j;
+      const j=await r.json();
+      if(j&&j.error&&/^pvi/.test(j.error.code||'')&&params.prop){ // 閲覧数まわりのエラー（存在しない題名など）→ 閲覧数なしで取り直す
+        const p2=Object.assign({},params);p2.prop=String(p2.prop).replace(/\|?pageviews/,'');delete p2.pvipdays;
+        if(!p2.prop) throw new Error('pvi'); return getJSON(base,p2,tries);
+      }
+      if(j&&j.error) throw new Error(j.error.code||'api');
+      cache.set(u,j); return j;
     }catch(e){lastErr=e;await new Promise(res=>setTimeout(res,500*(i+1)));}
   }
   throw lastErr;
@@ -252,7 +258,7 @@ const CREATIVE=/漫画|アニメ|作品|映画|シリーズ|番組|ゲーム|小
 function views(x){const v=x.pageviews||{};let s=0;for(const k in v)s+=(v[k]||0);return s;}
 
 async function resolve(query,opt={}){
-  const q=query.trim(); const nq=norm(q);
+  const q=query.trim(); const nq=norm(q); const ctxs=[].concat(opt.ctx||[]).filter(Boolean); const nctxs=ctxs.map(norm).filter(x=>x.length>=2); const ctx=ctxs[0]||'';
   const cands=[]; let primary=null; const seen=new Set();
   const push=c=>{const k=c.title||c.qid;if(!k||seen.has(k))return;seen.add(k);cands.push(c);};
   // 候補の点数：名前の一致・説明文・人物らしさ・閲覧数（人気）
@@ -264,14 +270,23 @@ async function resolve(query,opt={}){
     return ((after&&KANA.test(after)&&kanaQ)||(before&&KANA.test(before)&&KANA.test(nq[0])))?-1:0;
   };
   const scoreOf=x=>{const d=x.description||'',t=x.title||'',from=x.from||'';const nt=norm(cleanTitle(t)),nf=norm(cleanTitle(from));
-    const tm=(nt===nq||nf===nq)?4:(nt.includes(nq)||nf.includes(nq))?3:0;
+    const tm=(nt===nq||nf===nq)?6:(nt.includes(nq)||nf.includes(nq))?3:0;
     const persona=isPersona(d), work=isWork(d);
+    const realPerson=/選手|俳優|女優|歌手|声優|タレント|芸人|漫画家|作家|政治家|YouTuber|アイドル|ライバー|ナレーター|\(\d{4}|アナウンサー|モデル|実業家|学者|監督|ミュージシャン/.test(d);
     const dm=norm(d).includes(nq)?(persona?3:2):0;
-    if(!tm&&!dm) return -99;                       // 名前と無関係なページは候補にしない
+    if(!tm&&!dm&&!(nctxs.length&&(x.ft||x.list))) return -99;  // 名前と無関係なページは候補にしない（作品名つきの全文検索結果・登場人物ページは除く）
+    const ftOnly=(!tm&&!dm&&!x.list&&x.it==null)?-3:0;             // 本文に名前が出るだけのページ（グッズ・声優など）は控えめに
+    const itb=((x.it===0)?4:(x.it!=null)?2:0)*(work?0.5:1);         // 「記事名に名前を含む」検索の上位は強い（intitle）。作品ページなら半分
+    const exactBonus=(tm===6&&!work&&!x.list)?2:0;                  // 記事名そのもの（イーブイ）は作品タイトル内の一致より強い
     const tok=cleanTitle(from||t).split(/[・\s　]/).some(s=>norm(s)===nq)?1:0;
     const bd=tm===3?Math.min(boundary(nt),nf?boundary(nf):0):0;
     const viaSection=x.from&&!persona;              // 別名→作品や一覧ページへのリダイレクトは閲覧数を数えない
-    return tm+tok+bd+((nt.startsWith(nq)||nf.startsWith(nq))?1:0)+dm+(persona?2:0)+(/キャラクター|登場人物/.test(t)?1:0)-(work?1:0)-(!persona&&!work?1:0)+(viaSection?0:Math.log10(views(x)+1));};
+    const inT=nctxs.some(c=>norm(t).includes(c)), inD=nctxs.some(c=>norm(d).includes(c));
+    const own=persona&&inD;                                   // その作品のキャラクター本人の記事
+    const cm=nctxs.length?(own?7:(x.list||(inT&&/登場人物|キャラクター|一覧/.test(t)))?7:(inT||inD)?3:(realPerson?-3:(d?-2:0))):0;
+    const tmc=(nctxs.length&&d&&!inT&&!inD)?Math.min(tm,3):tm;   // 作品名つきのときは、作品と無関係な完全一致（ゾロ→ガンダム）を優先しない
+    const wk=opt.work?(CREATIVE.test(d)?4:(d?-2:0)):0;               // 作品名を探しているときは作品（漫画・アニメ…）を優先 // 作品名つきの検索：その作品の登場人物ページを最優先
+    return tmc+tok+bd+ftOnly+itb+exactBonus+wk+((nt.startsWith(nq)||nf.startsWith(nq))?1:0)+dm+cm+(persona?2:0)+(/キャラクター|登場人物/.test(t)?1:0)-(work?1:0)-(!persona&&!work?1:0)+(viaSection?0:Math.log10(views(x)+1));};
 
   if(opt.qid){ primary={qid:opt.qid,title:null,desc:opt.desc||'',label:opt.label||q}; }
   else if(opt.title){
@@ -282,55 +297,72 @@ async function resolve(query,opt={}){
       if(rd&&(rd.tofragment||!isPersona(p.description))&&norm(cleanTitle(p.title))!==norm(cleanTitle(opt.title))){primary.sectionOf=p.title;primary.label=cleanTitle(opt.title);}
     }
   }else{
-    const [A,W,S]=await Promise.all([
+    const [A,W,S,S2]=await Promise.all([
       getJSON(JA,Object.assign({action:'query',titles:q,redirects:1,list:'prefixsearch',pssearch:q,pslimit:8},PAGEPROPS)),
       getJSON(WD,{action:'wbsearchentities',search:q,language:'ja',uselang:'ja',limit:7,type:'item'}).catch(()=>({search:[]})),
-      getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:q,gsrlimit:6,gsrnamespace:0},PAGEPROPS)).catch(()=>null),
+      getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:ctx?('"'+q+'"'):q,gsrlimit:8,gsrnamespace:0},PAGEPROPS)).catch(()=>null),
+      ctx?getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:'intitle:'+q.replace(/(ちゃん|くん|さん|君|様|さま|先生|氏|たん)$/,'')+' '+(ctxs[1]||ctx),gsrlimit:8,gsrnamespace:0},PAGEPROPS)).catch(()=>null):null,
     ]);
+    const itRank={};
+    if(S2&&S2.query&&S2.query.pages){ S2.query.pages.slice().sort((a,b)=>(a.index||0)-(b.index||0)).forEach((x,k)=>{itRank[x.title]=k;});
+      const have=new Set((S&&S.query&&S.query.pages||[]).map(x=>x.title)); const merged=(S&&S.query&&S.query.pages)||[]; S2.query.pages.forEach(x=>{if(!have.has(x.title))merged.push(x);}); if(S&&S.query) S.query.pages=merged; else if(S) S.query={pages:merged}; }
     const p=A.query.pages[0];
     const rd0=(A.query.redirects||[])[0]; const redirected=!!rd0;
     const toSection=redirected&&!p.missing&&(!!rd0.tofragment||!isPersona(p.description));
     const wdExact=(W.search||[]).filter(h=>norm((h.match||{}).text)===nq||norm(h.label)===nq);
     const wdPersona=wdExact.filter(h=>isPersona(h.description));
+    if(opt.work){ const wc=wdExact.find(h=>CREATIVE.test(h.description||'')); if(wc){ return {primary:{qid:wc.id,title:null,desc:wc.description||'',label:wc.label||q},cands:[]}; } }
     const isDis=!p.missing&&p.pageprops&&('disambiguation' in p.pageprops);
     const sameName=!p.missing&&norm(cleanTitle(p.title))===nq;
     const fulltext=(S&&S.query&&S.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).sort((a,b)=>(a.index||0)-(b.index||0));
+    fulltext.forEach(x=>x.ft=true);
 
-    if(!p.missing&&!isDis&&(sameName||!toSection)&&isPersona(p.description)){
+    if(!opt.work&&!nctxs.length&&!p.missing&&!isDis&&(sameName||!toSection)&&isPersona(p.description)){
       // 一番シンプルなケース：その名前の記事があって人物・キャラクター
       primary={title:p.title,qid:(p.pageprops||{}).wikibase_item,desc:p.description||'',label:cleanTitle(p.title)};
-    }else if(!p.missing&&!isDis&&sameName&&CREATIVE.test(p.description||'')&&wdPersona.length){
+    }else if(!opt.work&&!nctxs.length&&!p.missing&&!isDis&&sameName&&CREATIVE.test(p.description||'')&&wdPersona.length){
       // 記事が作品名で、同名のキャラクター項目が別にある（ドラえもん・アンパンマン）
       const h=wdPersona[0]; push({title:p.title,desc:p.description||'',qid:(p.pageprops||{}).wikibase_item});
       primary={qid:h.id,title:null,desc:h.description||'',label:h.label||q};
-    }else if(!p.missing&&!isDis&&toSection&&!sameName){
+    }else if(!nctxs.length&&!p.missing&&!isDis&&toSection&&!sameName){
       // 別の記事の一部へのリダイレクト（竈門炭治郎→鬼滅の刃、エレン→進撃の巨人の登場人物、ちいかわ→作品記事）
       const h=wdPersona[0];
       primary={title:p.title,qid:h?h.id:(p.pageprops||{}).wikibase_item,desc:h?h.description:(p.description||''),label:q,sectionOf:p.title};
     }else{
       // 迷うケース：候補を集めて点数で選ぶ（曖昧さ回避・部分一致・作品ページなど）
       let pool=[];
-      const titles=new Set();
+      const titles=new Set(); const listTitles=new Set();
+      ctxs.forEach(c=>['の登場人物','の登場人物一覧','の登場キャラクター','のキャラクター一覧'].forEach(sfx=>{titles.add(c+sfx);listTitles.add(c+sfx);}));
+      if(!p.missing&&!isDis) titles.add(p.title);
       (A.query.prefixsearch||[]).forEach(x=>titles.add(x.title));
       fulltext.forEach(x=>titles.add(x.title));
-      if(!p.missing&&!isDis) titles.add(p.title);
+      const NOPV={prop:'description|pageprops',ppprop:'disambiguation|wikibase_item'};
       const jobs=[];
-      if(titles.size) jobs.push(getJSON(JA,Object.assign({action:'query',titles:[...titles].slice(0,40).join('|'),redirects:1},PAGEPROPS)).catch(()=>null));
-      if(isDis) jobs.push(getJSON(JA,Object.assign({action:'query',generator:'links',titles:p.title,gpllimit:100,gplnamespace:0,redirects:1},PAGEPROPS)).catch(()=>null));
+      if(titles.size) jobs.push(getJSON(JA,Object.assign({action:'query',titles:[...titles].slice(0,50).join('|'),redirects:1},NOPV)).catch(()=>null));
+      if(isDis) jobs.push(getJSON(JA,Object.assign({action:'query',generator:'links',titles:p.title,gpllimit:500,gplnamespace:0,redirects:1},NOPV)).catch(()=>null));
       const rs=await Promise.all(jobs);
+      // 閲覧数は存在するページだけ別に聞く（存在しない題名が混ざるとAPIがエラーを返すため）
+      const existing=[...new Set(rs.flatMap(r=>(r&&r.query&&r.query.pages||[]).filter(x=>!x.missing).map(x=>x.title)))].slice(0,50);
+      const chunks=[]; for(let i=0;i<existing.length;i+=8) chunks.push(existing.slice(i,i+8));
+      const PVs=await Promise.all(chunks.map(ch=>getJSON(JA,{action:'query',titles:ch.join('|'),prop:'pageviews',pvipdays:30},1).catch(()=>null)));
+      const pvmap={}; PVs.forEach(PV=>(PV&&PV.query&&PV.query.pages||[]).forEach(x=>{pvmap[x.title]=x.pageviews||{};}));
       for(const r of rs){ if(!r||!r.query) continue;
-        const rmap={}; (r.query.redirects||[]).forEach(x=>{ if(!rmap[x.to]||norm(x.from).includes(nq)) rmap[x.to]=x.from; });
-        (r.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).forEach(x=>{x.from=rmap[x.title]||'';pool.push(x);});
+        const rmap={}, lmap={}; [...(A.query.redirects||[]),...(r.query.redirects||[])].forEach(x=>{ if(!rmap[x.to]||norm(x.from).includes(nq)) rmap[x.to]=x.from; if(listTitles.has(x.from)) lmap[x.to]=true; });
+        (r.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).forEach(x=>{x.from=rmap[x.title]||'';x.list=listTitles.has(x.title)||!!lmap[x.title];x.pageviews=pvmap[x.title]||{};pool.push(x);});
       }
-      const byTitle={}; pool.forEach(x=>{ if(!byTitle[x.title]||(x.from&&!byTitle[x.title].from)) byTitle[x.title]=x; });
+      const ftTitles=new Set(fulltext.map(x=>x.title));
+      const byTitle={}; pool.forEach(x=>{ x.ft=ftTitles.has(x.title); x.it=(x.title in itRank)?itRank[x.title]:null; const o=byTitle[x.title]; if(!o){byTitle[x.title]=x;return;} if(x.from&&!o.from)o.from=x.from; if(x.list)o.list=true; if(x.ft)o.ft=true; });
       pool=Object.values(byTitle).map(x=>Object.assign(x,{score:scoreOf(x)})).filter(x=>x.score>=3.5).sort((a,b)=>b.score-a.score);
       const top=pool[0];
       const wdTop=wdPersona[0];
       const wdScore=wdTop?6:0; // 完全一致＋人物（閲覧数は不明）
       if(top&&top.score>=wdScore){
-        const via=top.from&&!isPersona(top.description)&&norm(cleanTitle(top.title))!==norm(cleanTitle(top.from))?top.from:'';
+        const via=!top.list&&top.from&&!isPersona(top.description)&&norm(cleanTitle(top.title))!==norm(cleanTitle(top.from))?top.from:'';
         primary={title:top.title,qid:(top.pageprops||{}).wikibase_item,desc:top.description||'',label:cleanTitle(via||top.title)};
-        if(via){primary.sectionOf=top.title;}
+        if(top.list||(ctx&&!isPersona(top.description)&&!norm(cleanTitle(top.title)).includes(nq))){ // 登場人物ページ・作品ページの中の節として扱う
+          const wp=wdPersona.find(hh=>nctxs.some(c=>norm(hh.description).includes(c)));
+          primary.sectionOf=top.title;primary.label=q;primary.qid=wp?wp.id:null;primary.desc=wp?wp.description:'';
+        }else if(via){primary.sectionOf=top.title;}
       }else if(wdTop){ primary={qid:wdTop.id,title:null,desc:wdTop.description||'',label:wdTop.label||q}; }
       pool.slice(0,8).forEach(x=>push({title:x.title,desc:x.description||'',qid:(x.pageprops||{}).wikibase_item,from:x.from}));
     }
@@ -372,13 +404,30 @@ function characterSection(text,name){
     const parts=name.split(/[・\s]/).filter(x=>x.length>=2);
     if(parts.length>1) i=secs.findIndex(s=>parts.every(pt=>norm(s.h).includes(norm(pt))));
   }
-  if(i<0) return null;
+  characterSection.lastHeading='';characterSection.byAlias=false;
+  const isLeaf=k=>!(secs[k+1]&&secs[k+1].lvl>secs[k].lvl);
+  if(i<0){ // 愛称で呼ばれるキャラ（たまちゃん→穂波たまえ）：末端の節で、冒頭に名前が出てくるものを使う
+    i=secs.findIndex((s,k)=>s.lvl>=2&&isLeaf(k)&&norm(s.body.slice(0,240)).includes(n));
+    if(i>=0) characterSection.byAlias=true;
+    else{ // 見出しが無いキャラ：名前が最初に出る位置から一定量だけ切り出す
+      const k=secs.findIndex(s=>norm(s.body).includes(n));
+      if(k<0) return null;
+      const b=secs[k].body; const pos=b.indexOf(name)>=0?b.indexOf(name):0;
+      return b.slice(Math.max(0,pos-60),pos+1400);
+    }
+  }
   let body=secs[i].body; const lvl=secs[i].lvl;
   for(let j=i+1;j<secs.length&&secs[j].lvl>lvl;j++) body+='\n=== '+secs[j].h+' ===\n'+secs[j].body;
+  const hd=secs[i].h.replace(/[（(].*$/,'').trim();
+  const generic=/レギュラー|主要|主な|その他|一覧|家族|関係|卒業生|団$|隊$|軍$|組$|派$|側$|たち$|達$|メンバー|仲間|人物|キャラクター|概要|来歴|備考|上位|以下|以上|順|名$|位$|編$|章$|巻$|話$|期$|部$|篇$|回$|年$|校$|国$|里$|村$|町$|市$|\d/;
+  if(characterSection.byAlias){ // 愛称一致：その節の中でも名前が出る前後だけを使う（他のキャラの記述を混ぜない）
+    const pos=Math.max(0,body.indexOf(name)); body=body.slice(Math.max(0,pos-80),pos+1400);
+    if(hd.length<=12&&!generic.test(hd)&&pos<300) characterSection.lastHeading=hd;
+  }else if(hd.length<=14&&!generic.test(hd)&&norm(hd).includes(n)) characterSection.lastHeading=hd;
   return body;
 }
 let CUR_NAME='';
-const JUNK=/^(隙|威力|技|能力|力|才能|実力|存在|状態|様子|姿|自体|全体|以前|当初|一方|ため|こと|これ|それ|あれ|もの|自分|自身|本人|相手|彼|彼女|多く|ある|いる|なる|する|した|特に|主に|他|その他|何|誰|人|全て|すべて|全員|皆|みんな|一部|大半|ほとんど|時|頃|後|前|中|上|下|方|際|場合|点|面|事|物|者|形|例|際に|時に|なにより|何より|誰より|一番|最も|もっとも|いう|という|同様|同じ|これら|それら|以上|以下|以外)$/;
+const JUNK=/^(ない|ほか|他|以外|なし|無し|隙|威力|技|能力|力|才能|実力|存在|状態|様子|姿|自体|全体|以前|当初|一方|ため|こと|これ|それ|あれ|もの|自分|自身|本人|相手|彼|彼女|多く|ある|いる|なる|する|した|特に|主に|他|その他|何|誰|人|全て|すべて|全員|皆|みんな|一部|大半|ほとんど|時|頃|後|前|中|上|下|方|際|場合|点|面|事|物|者|形|例|際に|時に|なにより|何より|誰より|一番|最も|もっとも|いう|という|同様|同じ|これら|それら|以上|以下|以外)$/;
 function tidy(s){
   s=(s||'').normalize('NFKC').replace(/[（(][^）)]*[）)]/g,'').replace(/[「」『』"'“”]/g,'')
     .replace(/^[はもがを、。：:\s]+/,'')
@@ -399,7 +448,7 @@ function okItem(v){
   if(JUNK.test(v)) return false;
   if(/(ません|ます|です|のに|けど|だが|から$|ので$|ため|間違|思っ|言っ|語っ|述べ|答え|話し|受け|反撃|攻撃|によれ|によると|として$|より|の頃|時代|方法|場合|らしい|関わ|等身大|だけ|以外|のみ|嫌いなもの|好きなもの|苦手なもの)/.test(v)) return false;
   if(/^(いう|という|この|その|あの|どの|ある|いる|同じ|同様|して|した|いた|され|する|なる|周囲|周り|相手|自ら|自分|まだ|もう|また|ただ)/.test(v)) return false;
-  if(/して|されて|していた|ず$|\d+[~〜]\d+|の為$|ため$|って|いて|んで|えて|付いて|乗った|^(?:撮影|使用|作|変え|行|行ったり|考え|見|言|聞|持|取|出|入|来|生き|死|殺|治|治療|回復|移動|変化|成長|存在)(?:する|う|る|く|ぐ|す|つ|む|え|け|せ|て|ね|べ|め|れ)?こと$/.test(v)) return false;
+  if(/それ|これ|あれ|どれ|して|されて|していた|ず$|\d+[~〜]\d+|の為$|ため$|って|いて|んで|えて|付いて|乗った|^(?:撮影|使用|作|変え|行|行ったり|考え|見|言|聞|持|取|出|入|来|生き|死|殺|治|治療|回復|移動|変化|成長|存在)(?:する|う|る|く|ぐ|す|つ|む|え|け|せ|て|ね|べ|め|れ)?こと$/.test(v)) return false;
   if(/^[ぁ-ん]/.test(v)&&!(/^[ぁ-んー]+$/.test(v)&&v.length>=2&&!/(こと|もの|ます|れる|ない|ある|いる)$/.test(v))&&!/^[おご][一-龥ァ-ヶ]/.test(v)) return false; // ひらがな始まりは全部ひらがなの語だけ（「らうこと」などの切れ端を除外）
   if(CUR_NAME&&(CUR_NAME.includes(v)||v.includes(CUR_NAME))) return false;
   if(/^[A-Za-z0-9]{2,6}$/.test(v)) return false;
@@ -466,7 +515,7 @@ function extractDislikes(text){
 }
 function enTidy(s){
   s=(s||'').replace(/\([^)]*\)/g,'').replace(/^(?:the|a|an|his|her|their|its|to|of)\s+/i,'').split(/\s+(?:and|but|because|which|who|that|as|when|while|although|though|since|so|despite)\s+|[,;:]/)[0].trim().replace(/[.\s]+$/,'');
-  return s.length>=2&&s.length<=30&&!/\b(?:he|she|they|it|him|her|them|this|that|these|those|his|her|their)\b/i.test(s)&&!/^(?:not|no|never|only|even|also|be|being|been|do|does|did|have|has|had)\b/i.test(s)?s:'';
+  return s.length>=2&&s.length<=30&&!/\b(?:he|she|they|it|him|her|them|this|that|these|those|his|her|their|both|at|with|for|from|by)\b/i.test(s)&&!/^(?:not|no|never|only|even|also|be|being|been|do|does|did|have|has|had|to|poke|make|take|get|go|use|play|see|say|tell|keep|put)\b/i.test(s)?s:'';
 }
 function enPick(text,pats,max){
   const out=[];
@@ -668,8 +717,21 @@ async function run(query,opt={}){
   els.v.name.textContent=cleanTitle(q);els.v.name.className='main';
   setImage(null);els.empty.innerHTML='<div class="big">🔎</div><div>しらべています…</div>';
   try{
-    const {primary,cands}=await resolve(q,opt);
+    let {primary,cands}=await resolve(q,opt);
     if(my!==seq) return;
+    // 「サザエさんの波平」「ワンピース ゾロ」のように作品名つきで入力されたときは、後ろをキャラ名・前を手がかりにして探し直す
+    const isWeak=!primary||(primary.title&&!primary.sectionOf&&!isPersona(primary.desc)&&norm(cleanTitle(primary.title))!==norm(q));
+    const sp=/^(.{1,24})(?:の|\s|　)(.{1,20}?)$/.exec(q);
+    if(isWeak&&sp&&!opt.title&&!opt.qid){
+      const w=await resolve(sp[1],{work:true}).catch(()=>({primary:null}));   // まず作品名を記事として特定（別名を手がかりにする）
+      if(my!==seq) return;
+      const aliases=[sp[1]]; if(w.primary){if(w.primary.title)aliases.push(cleanTitle(w.primary.title));if(w.primary.label)aliases.push(w.primary.label);
+        if(!w.primary.title&&w.primary.qid){const E=await getJSON(WD,{action:'wbgetentities',ids:w.primary.qid,props:'sitelinks|labels',languages:'ja|en',sitefilter:'jawiki|enwiki'}).catch(()=>null);const e=E&&E.entities&&E.entities[w.primary.qid];if(e){if(e.sitelinks&&e.sitelinks.jawiki)aliases.push(cleanTitle(e.sitelinks.jawiki.title));if(e.labels&&e.labels.en)aliases.push(e.labels.en.value);}}}
+      if(my!==seq) return;
+      const r2=await resolve(sp[2],{ctx:aliases});
+      if(my!==seq) return;
+      if(r2.primary){primary=r2.primary;cands=r2.cands;els.v.name.textContent=cleanTitle(sp[2]);}
+    }
     renderChips(cands);
     if(!primary) throw new Error('notfound');
 
@@ -689,11 +751,12 @@ async function run(query,opt={}){
     if(my!==seq) return;
     if(page&&page.missing) page=null;
     const label=(ent&&ent.labels&&(ent.labels.ja||ent.labels.en)||{}).value;
-    const dispName=cleanTitle(sectionOf?(primary.label||label||q):(title||label||primary.label||q));
+    let dispName=cleanTitle(sectionOf?(primary.label||label||q):(title||label||primary.label||q));
+    const enFromEnt=!!(ent&&ent.sitelinks&&ent.sitelinks.enwiki&&ent.sitelinks.enwiki.title);
     const enTitle=(ent&&ent.sitelinks&&ent.sitelinks.enwiki&&ent.sitelinks.enwiki.title)||(page&&page.langlinks&&page.langlinks[0]&&page.langlinks[0].title)||null;
     let text=(page&&page.extract)||'';
     let charOnly=null;
-    if(sectionOf&&text){ charOnly=characterSection(text,dispName); }
+    if(sectionOf&&text){ charOnly=characterSection(text,dispName); if(charOnly&&characterSection.lastHeading) dispName=characterSection.lastHeading; }
     // 自分の記事が無いキャラは「登場人物」一覧ページから該当の節を探す
     if(!text||(sectionOf&&!charOnly)){
       const S=await getJSON(JA,{action:'query',list:'search',srsearch:'"'+dispName+'"',srlimit:6}).catch(()=>null);
@@ -703,13 +766,14 @@ async function run(query,opt={}){
         const R=await getJSON(JA,{action:'query',titles:hit.title,prop:'extracts',explaintext:1,exlimit:1}).catch(()=>null);
         const full=(R&&R.query.pages[0].extract)||'';
         const sec=characterSection(full,dispName);
-        if(sec){charOnly=sec;text=full;sectionOf=hit.title;if(!title)title=hit.title;}
+        if(sec){charOnly=sec;text=full;sectionOf=hit.title;if(!title)title=hit.title;if(characterSection.lastHeading)dispName=characterSection.lastHeading;}
       }
     }
     if(my!==seq) return;
     const body=charOnly||text;
     const link=title?'https://ja.wikipedia.org/wiki/'+encodeURIComponent(sectionOf||title)+(sectionOf?'#'+encodeURIComponent(dispName):''):(enTitle?'https://en.wikipedia.org/wiki/'+encodeURIComponent(enTitle):'');
-    const desc=(ent&&ent.descriptions&&ent.descriptions.ja&&ent.descriptions.ja.value)||(!sectionOf&&page&&page.description)||primary.desc||'';
+    let desc=(ent&&ent.descriptions&&ent.descriptions.ja&&ent.descriptions.ja.value)||(!sectionOf&&page&&page.description)||primary.desc||'';
+    if(sectionOf&&(!desc||/一覧記事/.test(desc))) desc='『'+cleanTitle(sectionOf).replace(/の(登場|主な)?(人物|キャラクター).*$/,'')+'』の登場人物';
     const intro=(sectionOf?body:text).split(/\n==/)[0];
     setField('name',dispName,[sectionOf?'':extractReading(intro,dispName),desc].filter(Boolean).join('　'));
     current={name:dispName,title:sectionOf?null:title,qid:primary.qid||null,img:null};updateFavBtn();CUR_NAME=dispName;
@@ -772,7 +836,7 @@ async function run(query,opt={}){
     if(!can&&occupations.length){can=occupations.join('・').slice(0,30);}
     const src=sectionOf?'Wikipedia「'+cleanTitle(sectionOf)+'」より':'Wikipediaの記事より';
     let likeSub=like?src:'', disSub=dis?src:'', canSub=can?src:'', cantSub=cant?src:'';
-    if((!like||!dis||!can||!cant||!ageMain)&&enTitle){
+    if((!like||!dis||!can||!cant||!ageMain)&&enTitle&&(enFromEnt||!sectionOf)){
       const E=await getJSON(EN,{action:'query',titles:enTitle,redirects:1,prop:'extracts',explaintext:1,exlimit:1}).catch(()=>null);
       if(my!==seq) return;
       const et=(E&&E.query&&E.query.pages&&E.query.pages[0]&&E.query.pages[0].extract)||'';
