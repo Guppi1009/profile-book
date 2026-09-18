@@ -277,8 +277,9 @@ async function resolve(query,opt={}){
     const dm=norm(d).includes(nq)?(persona?3:2):0;
     if(!tm&&!dm&&!(nctxs.length&&(x.ft||x.list))) return -99;  // 名前と無関係なページは候補にしない（作品名つきの全文検索結果・登場人物ページは除く）
     const ftOnly=(!tm&&!dm&&!x.list&&x.it==null)?-3:0;             // 本文に名前が出るだけのページ（グッズ・声優など）は控えめに
-    const itb=((x.it===0)?4:(x.it!=null)?2:0)*(work?0.5:1);         // 「記事名に名前を含む」検索の上位は強い（intitle）。作品ページなら半分
-    const exactBonus=(tm===6&&!work&&!x.list)?2:0;                  // 記事名そのもの（イーブイ）は作品タイトル内の一致より強い
+    const unrelated=nctxs.length>0&&d&&!inT&&!inD&&!x.list;          // 作品名つきなのに作品と無関係（ハチワレ→サメ）
+    const itb=unrelated?0:((x.it===0)?4:(x.it!=null)?2:0)*(work?0.5:1); // 「記事名に名前を含む」検索の上位は強い（intitle）。作品ページなら半分
+    const exactBonus=(tm===6&&!work&&!x.list&&!unrelated)?2:0;       // 記事名そのもの（イーブイ）は作品タイトル内の一致より強い
     const tok=cleanTitle(from||t).split(/[・\s　]/).some(s=>norm(s)===nq)?1:0;
     const bd=tm===3?Math.min(boundary(nt),nf?boundary(nf):0):0;
     const viaSection=x.from&&!persona;              // 別名→作品や一覧ページへのリダイレクトは閲覧数を数えない
@@ -313,7 +314,9 @@ async function resolve(query,opt={}){
     const toSection=redirected&&!p.missing&&(!!rd0.tofragment||!isPersona(p.description));
     const wdExact=(W.search||[]).filter(h=>norm((h.match||{}).text)===nq||norm(h.label)===nq);
     const wdPersona=wdExact.filter(h=>isPersona(h.description));
-    if(opt.work){ const wc=wdExact.find(h=>CREATIVE.test(h.description||'')); if(wc){ return {primary:{qid:wc.id,title:null,desc:wc.description||'',label:wc.label||q},cands:[]}; } }
+    if(opt.work){ const pri=d=>/漫画|小説|ゲーム|絵本|メディアミックス/.test(d)?0:/シリーズ/.test(d)?1:2;
+      const wc=wdExact.filter(h=>CREATIVE.test(h.description||'')).sort((a,b)=>pri(a.description||'')-pri(b.description||''))[0];
+      if(wc){ return {primary:{qid:wc.id,title:null,desc:wc.description||'',label:wc.label||q},cands:[]}; } }
     const isDis=!p.missing&&p.pageprops&&('disambiguation' in p.pageprops);
     const sameName=!p.missing&&norm(cleanTitle(p.title))===nq;
     const fulltext=(S&&S.query&&S.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).sort((a,b)=>(a.index||0)-(b.index||0));
@@ -350,7 +353,7 @@ async function resolve(query,opt={}){
       const pvmap={}; PVs.forEach(PV=>(PV&&PV.query&&PV.query.pages||[]).forEach(x=>{pvmap[x.title]=x.pageviews||{};}));
       for(const r of rs){ if(!r||!r.query) continue;
         const rmap=Object.assign({},srFrom), lmap={}; [...(A.query.redirects||[]),...(r.query.redirects||[])].forEach(x=>{ if(!rmap[x.to]||norm(x.from).includes(nq)) rmap[x.to]=x.from; if(listTitles.has(x.from)) lmap[x.to]=true; });
-        (r.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).forEach(x=>{x.from=rmap[x.title]||'';x.list=listTitles.has(x.title)||!!lmap[x.title]||(nctxs.length>0&&nctxs.includes(norm(cleanTitle(x.title)))&&!norm(cleanTitle(x.title)).includes(nq));x.pageviews=pvmap[x.title]||{};pool.push(x);});
+        (r.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).forEach(x=>{x.from=rmap[x.title]||'';x.list=listTitles.has(x.title)||!!lmap[x.title]||(nctxs.length>0&&!norm(cleanTitle(x.title)).includes(nq)&&(nctxs.includes(norm(cleanTitle(x.title)))||nctxs.includes(norm(cleanTitle(rmap[x.title]||'')))||nctxs.some(c=>c.length>=3&&norm(cleanTitle(x.title)).startsWith(c)&&!isPersona(x.description)&&CREATIVE.test(x.description||''))));x.pageviews=pvmap[x.title]||{};pool.push(x);});
       }
       const ftTitles=new Set(fulltext.map(x=>x.title));
       const byTitle={}; pool.forEach(x=>{ x.ft=ftTitles.has(x.title); x.it=(x.title in itRank)?itRank[x.title]:null; const o=byTitle[x.title]; if(!o){byTitle[x.title]=x;return;} if(x.from&&!o.from)o.from=x.from; if(x.list)o.list=true; if(x.ft)o.ft=true; });
