@@ -273,6 +273,7 @@ async function resolve(query,opt={}){
   const scoreOf=x=>{const d=x.description||'',t=x.title||'',from=x.from||'';const nt=norm(cleanTitle(t)),nf=norm(cleanTitle(from));
     const tm=(nt===nq||nf===nq)?6:(nt.includes(nq)||nf.includes(nq))?3:0;
     const persona=isPersona(d), work=isWork(d);
+    const inT=nctxs.some(c=>norm(t).includes(c)), inD=nctxs.some(c=>norm(d).includes(c));
     const realPerson=/選手|俳優|女優|歌手|声優|タレント|芸人|漫画家|作家|政治家|YouTuber|アイドル|ライバー|ナレーター|\(\d{4}|アナウンサー|モデル|実業家|学者|監督|ミュージシャン/.test(d);
     const dm=norm(d).includes(nq)?(persona?3:2):0;
     if(!tm&&!dm&&!(nctxs.length&&(x.ft||x.list))) return -99;  // 名前と無関係なページは候補にしない（作品名つきの全文検索結果・登場人物ページは除く）
@@ -283,7 +284,6 @@ async function resolve(query,opt={}){
     const tok=cleanTitle(from||t).split(/[・\s　]/).some(s=>norm(s)===nq)?1:0;
     const bd=tm===3?Math.min(boundary(nt),nf?boundary(nf):0):0;
     const viaSection=x.from&&!persona;              // 別名→作品や一覧ページへのリダイレクトは閲覧数を数えない
-    const inT=nctxs.some(c=>norm(t).includes(c)), inD=nctxs.some(c=>norm(d).includes(c));
     const own=persona&&inD;                                   // その作品のキャラクター本人の記事
     const cm=nctxs.length?(own?7:(x.list||(inT&&/登場人物|キャラクター|一覧/.test(t)))?7:(inT||inD)?3:(realPerson?-3:(d?-2:0))):0;
     const tmc=(nctxs.length&&d&&!inT&&!inD)?Math.min(tm,3):tm;   // 作品名つきのときは、作品と無関係な完全一致（ゾロ→ガンダム）を優先しない
