@@ -130,6 +130,7 @@ main.card::after{right:70px;transform:rotate(5deg);background:repeating-linear-g
 #favBox .favrow .nm{flex:1;text-align:left;font:inherit;font-weight:700;font-size:15px;background:none;border:0;color:var(--ink);cursor:pointer;padding:6px 0}
 #favBox .favrow .del{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:var(--paper);color:var(--muted);border:2px solid var(--line);font-size:16px;padding:0}
 .chip.fav{background:var(--c-yellow);border-color:#f3d77a}
+.chiplabel{flex:0 0 auto;font-size:clamp(12px,1.7vh,14px);font-weight:700;color:var(--accent2);padding-left:4px;white-space:nowrap}
 #favBtn{position:absolute;right:14px;top:10px;z-index:4;width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--paper);font-size:24px;line-height:1;cursor:pointer;color:#e0a800;box-shadow:0 3px 0 rgba(0,0,0,.06);padding:0}
 #favBtn.on{background:var(--c-yellow);border-color:#f3d77a}
 #favBox button{font:inherit;font-weight:700;font-size:14px;padding:9px 16px;border-radius:999px;border:0;cursor:pointer}
@@ -300,9 +301,10 @@ async function resolve(query,opt={}){
     const [A,W,S,S2]=await Promise.all([
       getJSON(JA,Object.assign({action:'query',titles:q,redirects:1,list:'prefixsearch',pssearch:q,pslimit:8},PAGEPROPS)),
       getJSON(WD,{action:'wbsearchentities',search:q,language:'ja',uselang:'ja',limit:7,type:'item'}).catch(()=>({search:[]})),
-      getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:ctx?('"'+q+'"'):q,gsrlimit:8,gsrnamespace:0},PAGEPROPS)).catch(()=>null),
-      ctx?getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:'intitle:'+q.replace(/(ちゃん|くん|さん|君|様|さま|先生|氏|たん)$/,'')+' '+(ctxs[1]||ctx),gsrlimit:8,gsrnamespace:0},PAGEPROPS)).catch(()=>null):null,
+      getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:ctx?('"'+q+'"'):q,gsrlimit:8,gsrnamespace:0,list:'search',srsearch:ctx?('"'+q+'"'):q,srlimit:8,srprop:'redirecttitle'},PAGEPROPS)).catch(()=>null),
+      getJSON(JA,Object.assign({action:'query',generator:'search',gsrsearch:'intitle:'+q.replace(/(ちゃん|くん|さん|君|様|さま|先生|氏|たん)$/,'')+' '+(ctxs[1]||ctx||''),gsrlimit:8,gsrnamespace:0,list:'search',srsearch:'intitle:'+q.replace(/(ちゃん|くん|さん|君|様|さま|先生|氏|たん)$/,'')+' '+(ctxs[1]||ctx||''),srlimit:8,srprop:'redirecttitle'},PAGEPROPS)).catch(()=>null),
     ]);
+    const srFrom={}; [S,S2].forEach(R=>(R&&R.query&&R.query.search||[]).forEach(hh=>{ if(hh.redirecttitle&&(!srFrom[hh.title]||norm(hh.redirecttitle).includes(nq))) srFrom[hh.title]=hh.redirecttitle; }));
     const itRank={};
     if(S2&&S2.query&&S2.query.pages){ S2.query.pages.slice().sort((a,b)=>(a.index||0)-(b.index||0)).forEach((x,k)=>{itRank[x.title]=k;});
       const have=new Set((S&&S.query&&S.query.pages||[]).map(x=>x.title)); const merged=(S&&S.query&&S.query.pages)||[]; S2.query.pages.forEach(x=>{if(!have.has(x.title))merged.push(x);}); if(S&&S.query) S.query.pages=merged; else if(S) S.query={pages:merged}; }
@@ -315,7 +317,7 @@ async function resolve(query,opt={}){
     const isDis=!p.missing&&p.pageprops&&('disambiguation' in p.pageprops);
     const sameName=!p.missing&&norm(cleanTitle(p.title))===nq;
     const fulltext=(S&&S.query&&S.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).sort((a,b)=>(a.index||0)-(b.index||0));
-    fulltext.forEach(x=>x.ft=true);
+    fulltext.forEach(x=>{x.ft=true;x.it=(x.title in itRank)?itRank[x.title]:null;x.from=srFrom[x.title]||'';});
 
     if(!opt.work&&!nctxs.length&&!p.missing&&!isDis&&(sameName||!toSection)&&isPersona(p.description)){
       // 一番シンプルなケース：その名前の記事があって人物・キャラクター
@@ -332,7 +334,7 @@ async function resolve(query,opt={}){
       // 迷うケース：候補を集めて点数で選ぶ（曖昧さ回避・部分一致・作品ページなど）
       let pool=[];
       const titles=new Set(); const listTitles=new Set();
-      ctxs.forEach(c=>['の登場人物','の登場人物一覧','の登場キャラクター','のキャラクター一覧'].forEach(sfx=>{titles.add(c+sfx);listTitles.add(c+sfx);}));
+      ctxs.forEach(c=>{titles.add(c);['の登場人物','の登場人物一覧','の登場キャラクター','のキャラクター一覧'].forEach(sfx=>{titles.add(c+sfx);listTitles.add(c+sfx);});});
       if(!p.missing&&!isDis) titles.add(p.title);
       (A.query.prefixsearch||[]).forEach(x=>titles.add(x.title));
       fulltext.forEach(x=>titles.add(x.title));
@@ -347,8 +349,8 @@ async function resolve(query,opt={}){
       const PVs=await Promise.all(chunks.map(ch=>getJSON(JA,{action:'query',titles:ch.join('|'),prop:'pageviews',pvipdays:30},1).catch(()=>null)));
       const pvmap={}; PVs.forEach(PV=>(PV&&PV.query&&PV.query.pages||[]).forEach(x=>{pvmap[x.title]=x.pageviews||{};}));
       for(const r of rs){ if(!r||!r.query) continue;
-        const rmap={}, lmap={}; [...(A.query.redirects||[]),...(r.query.redirects||[])].forEach(x=>{ if(!rmap[x.to]||norm(x.from).includes(nq)) rmap[x.to]=x.from; if(listTitles.has(x.from)) lmap[x.to]=true; });
-        (r.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).forEach(x=>{x.from=rmap[x.title]||'';x.list=listTitles.has(x.title)||!!lmap[x.title];x.pageviews=pvmap[x.title]||{};pool.push(x);});
+        const rmap=Object.assign({},srFrom), lmap={}; [...(A.query.redirects||[]),...(r.query.redirects||[])].forEach(x=>{ if(!rmap[x.to]||norm(x.from).includes(nq)) rmap[x.to]=x.from; if(listTitles.has(x.from)) lmap[x.to]=true; });
+        (r.query.pages||[]).filter(x=>!x.missing&&!(x.pageprops&&'disambiguation' in x.pageprops)).forEach(x=>{x.from=rmap[x.title]||'';x.list=listTitles.has(x.title)||!!lmap[x.title]||(nctxs.length>0&&nctxs.includes(norm(cleanTitle(x.title)))&&!norm(cleanTitle(x.title)).includes(nq));x.pageviews=pvmap[x.title]||{};pool.push(x);});
       }
       const ftTitles=new Set(fulltext.map(x=>x.title));
       const byTitle={}; pool.forEach(x=>{ x.ft=ftTitles.has(x.title); x.it=(x.title in itRank)?itRank[x.title]:null; const o=byTitle[x.title]; if(!o){byTitle[x.title]=x;return;} if(x.from&&!o.from)o.from=x.from; if(x.list)o.list=true; if(x.ft)o.ft=true; });
@@ -367,12 +369,16 @@ async function resolve(query,opt={}){
       pool.slice(0,8).forEach(x=>push({title:x.title,desc:x.description||'',qid:(x.pageprops||{}).wikibase_item,from:x.from}));
     }
     if(!primary&&wdExact.length){const h=wdExact[0];primary={qid:h.id,title:null,desc:h.description||'',label:h.label||q};}
-    if(!primary&&fulltext.length){const x=fulltext[0];primary={title:x.title,qid:(x.pageprops||{}).wikibase_item,desc:x.description||'',label:cleanTitle(x.title)};}
+    if(!primary&&fulltext.length){const x=fulltext.find(y=>scoreOf(y)>=3);if(x)primary={title:x.title,qid:(x.pageprops||{}).wikibase_item,desc:x.description||'',label:cleanTitle(x.title)};}
     wdPersona.forEach(h=>push({qid:h.id,title:null,label:h.label,desc:h.description||''}));
-    fulltext.filter(x=>scoreOf(x)>=3).forEach(x=>push({title:x.title,desc:x.description||'',qid:(x.pageprops||{}).wikibase_item}));
+    fulltext.filter(x=>x.it!=null||scoreOf(x)>=3).forEach(x=>push({title:x.title,desc:x.description||'',qid:(x.pageprops||{}).wikibase_item,from:x.from}));
+    (W.search||[]).filter(h=>isPersona(h.description)&&!wdPersona.includes(h)).forEach(h=>push({qid:h.id,title:null,label:h.label,desc:h.description||''}));
     (A.query.prefixsearch||[]).forEach(x=>push({title:x.title}));
   }
-  const out=cands.filter(c=>!primary||((c.title&&c.title!==primary.title&&c.title!==primary.sectionOf)||(!c.title&&c.qid&&c.qid!==primary.qid))).slice(0,6);
+  const seenName=new Set();
+  const out=cands.filter(c=>!primary||((c.title&&c.title!==primary.title&&c.title!==primary.sectionOf)||(!c.title&&c.qid&&c.qid!==primary.qid)))
+    .filter(c=>{const k=norm(cleanTitle(c.title||c.label||''));if(!k||seenName.has(k))return false;seenName.add(k);return true;})
+    .sort((a,b)=>((isPersona(b.desc)||(b.from&&norm(b.from).includes(nq)))?1:0)-((isPersona(a.desc)||(a.from&&norm(a.from).includes(nq)))?1:0)).slice(0,8);
   return {primary,cands:out};
 }
 
@@ -695,15 +701,20 @@ function openChooser(){ // 画像を差し替えたいとき
   els.img.classList.remove('show');els.empty.style.display='';
   els.empty.innerHTML=chooserHTML(currentName(),'べつの画像にする');wireChooser();
 }
-function renderChips(cands){
+function renderChips(cands,label){
   els.chips.innerHTML='';els.chips.dataset.favs='0';
+  if(cands.length){const l=document.createElement('span');l.className='chiplabel';l.textContent=label||'もしかして：';els.chips.appendChild(l);}
   const names=cands.map(c=>cleanTitle(c.title||c.label||''));
+  const last=norm((els.q.value.trim().split(/の|\s|　/).pop())||'');
   cands.forEach((c,i)=>{
     const b=document.createElement('button');b.type='button';b.className='chip';
     const full=c.title||c.label||''; const dup=names.filter(n=>n===names[i]).length>1;
-    const label=dup?full:names[i]; const d=c.desc?' <span class="d">'+esc(c.desc.slice(0,18))+'</span>':'';
-    b.innerHTML=esc(label)+d;b.title=full+(c.desc?' — '+c.desc:'');
-    b.onclick=()=>{els.q.value=names[i];run(names[i],{title:c.title||undefined,qid:c.title?undefined:c.qid,desc:c.desc,label:c.label});};
+    let text=dup?full:names[i]; let goName=names[i]; let goTitle=c.title||undefined;
+    // 例：磯野波平（サザエさんの登場人物）…リダイレクト元の名前で表示し、その名前で開く
+    if(c.from&&last&&norm(c.from).includes(last)&&/登場人物|一覧|キャラクター/.test(full)){text=cleanTitle(c.from)+'（'+cleanTitle(full)+'）';goName=cleanTitle(c.from);goTitle=c.from;}
+    const d=c.desc?' <span class="d">'+esc(c.desc.slice(0,18))+'</span>':'';
+    b.innerHTML=esc(text)+d;b.title=full+(c.desc?' — '+c.desc:'');
+    b.onclick=()=>{els.q.value=goName;run(goName,{title:goTitle,qid:c.title?undefined:c.qid,desc:c.desc,label:c.label});};
     els.chips.appendChild(b);
   });
 }
@@ -732,7 +743,9 @@ async function run(query,opt={}){
       if(my!==seq) return;
       if(r2.primary){primary=r2.primary;cands=r2.cands;els.v.name.textContent=cleanTitle(sp[2]);}
     }
-    renderChips(cands);
+    const weak=!primary||(!primary.sectionOf&&!isPersona(primary.desc));
+    renderChips(cands,weak?'ちがう？ もしかして：':'もしかして：');
+    if(weak&&cands.length&&primary) show('ちがう人が出たら、上の「もしかして」から選んでね',3500);
     if(!primary) throw new Error('notfound');
 
     const jobs={};
@@ -856,7 +869,7 @@ async function run(query,opt={}){
     if(my!==seq) return;
     ['origin','age','like','dislike','can','cant'].forEach(k=>setField(k,'',''));
     current=null;updateFavBtn();
-    if(e&&e.message==='notfound'){setField('name',cleanTitle(q),'見つかりませんでした');noImage('',q);show('見つかりませんでした。別の言い方で試してみてね');}
+    if(e&&e.message==='notfound'){setField('name',cleanTitle(q),'見つかりませんでした');noImage('',q);show(els.chips.querySelector('.chip')?'見つかりませんでした。上の「もしかして」から選んでね':'見つかりませんでした。別の言い方で試してみてね',3500);}
     else{setField('name',cleanTitle(q),'通信エラー');show('通信に失敗しました。もう一度試してみてね');console.error(e);}
   }finally{ if(my===seq) busy(false); }
 }
@@ -917,6 +930,7 @@ function toggleFav(){
 function openFav(f){$('favBox').classList.remove('on');els.q.value=f.name;run(f.name,f.title?{title:f.title}:(f.qid?{qid:f.qid,label:f.name}:{}));}
 function renderFavChips(){ // 検索前はお気に入りをチップで並べる
   const favs=getFavs(); els.chips.innerHTML=''; els.chips.dataset.favs='1';
+  if(favs.length){const l=document.createElement('span');l.className='chiplabel';l.textContent='⭐ お気に入り：';els.chips.appendChild(l);}
   favs.forEach(f=>{const b=document.createElement('button');b.type='button';b.className='chip fav';b.textContent='⭐ '+f.name;b.onclick=()=>openFav(f);els.chips.appendChild(b);});
 }
 function renderFavList(){
